@@ -11,6 +11,7 @@ You need to create a dir mnt, cache and the files.db
 
 At this moment it seems that it is able to read file, almost refined the save
 
+This is the table in the files.db
 CREATE TABLE toupload(
         id INTEGER primary key,
         path TEXT NOT NULL,
