@@ -7,7 +7,12 @@ I am planning to add OneDrive support in a project developed in nodejs, since I 
 A couple of days ago I developed this app, in order to create a virtual file system using Fuse (using node fuse bindings) and I developed a graph authentication and OneDrive connected.
 
 
-You need to create a dir mnt, cache and the sqlite3 db
+You need to create a dir mnt, cache and the files.db
 
 At this moment it seems that it is able to read file, almost refined the save
 
+CREATE TABLE toupload(
+        id INTEGER primary key,
+        path TEXT NOT NULL,
+        tmpfile TEXT NOT NULL
+);
