@@ -2,7 +2,7 @@ var fuse = require('node-fuse-bindings')
 var onedrive=require('./onedrive-c')
 const fs=require('fs')
 const sqlite3 = require('sqlite3')
-const db = new sqlite3.Database('files.db');
+const db = new sqlite3.Database('files.sqlite');
 
 // const strs = require('stringstream')
 
@@ -17,31 +17,11 @@ onedrive.buildTreeDelta("","",function(v){
 _dir=onedrive._structure
 _waiting=false
 
-// function findDir( path, _struct )
-// {
-//   _path=path.split('/')
-//   _dir=_struct
-//   for( var b in _path)
-//   {
-//     if(b==0)
-//     {
-//       continue
-//     }
-//     if( _path[b]!='' )
-//     {
-//       if(_path[b] in _dir.folders)
-//       {
-//         _dir=_dir.folders[_path[b]]
-//       }
-//     }
-//   }
-//   return _dir
-// }
 fuse.mount(mountPath, {
+  // Force Umount
   force: true,
   readdir: async function (path, cb) {
     console.log('readdir(%s)', path)
-    // _path=path.split('/')
     _dir=onedrive.findDir(path, onedrive._structure)
     
     var _files=[]
@@ -156,12 +136,6 @@ fuse.mount(mountPath, {
           _fileToUpload={size: 0, fileRef:null, buffer:[]}
         })
       })
-    // if(_fileToUpload.fileRef!=null)
-    // {
-    //   _fileToUpload[path].fileRef.end()
-    //   // var stream = fs.createWriteStream("cache/my_file.txt");
-    //   // _fileToUpload[path].fileRef=stream;
-    // }
     cb(0)
   },
   unlink: async function(path, cb) {
