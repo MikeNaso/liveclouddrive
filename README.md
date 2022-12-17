@@ -11,9 +11,16 @@ You need to create a dir mnt, cache and the files.db
 
 At this moment it seems that it is able to read file, almost refined the save
 
-This is the table in the files.db
+This is the table in the files.sqlite
+
 CREATE TABLE toupload(
         id INTEGER primary key,
         path TEXT NOT NULL,
         tmpfile TEXT NOT NULL
 );
+
+You should register an application in the Azure portal
+This is the autorisations
+- files.readwrite
+- files.readwrite.all
+- offline_access
