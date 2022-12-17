@@ -1,0 +1,19 @@
+{
+  "name": "liveclouddrive",
+  "version": "1.0.0",
+  "description": "Proof of concept",
+  "main": "GraphFuse.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pbxip/liveclouddrive.git"
+  },
+  "author": "Mike",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/pbxip/liveclouddrive/issues"
+  },
+  "homepage": "https://github.com/pbxip/liveclouddrive#readme"
+}
