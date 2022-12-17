@@ -1,8 +1,0 @@
-module.exports = {
-    apiUrl: "https://graph.microsoft.com/v1.0/",
-    client_id: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-    client_secret: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx",
-    scope:"files.readwrite%20files.readwrite.all%20offline_access",
-    redirect: "http://localhost/thisis",
-    loginUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/"
-  };
