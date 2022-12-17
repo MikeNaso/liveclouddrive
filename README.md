@@ -1,4 +1,4 @@
-# liveclouddrive
+# Live Cloud Drive
 ## Story behind this "crap" (I am not a developer, don't be scared)
 
 **This is only a proof of concept**
