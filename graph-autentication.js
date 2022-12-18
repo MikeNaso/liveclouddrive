@@ -21,7 +21,6 @@ async function getToken( callback )
         tokens = JSON.parse(rawdata);
         // Here we should change using the timestamp and the expiration time to doit only if needed
         refreshToken( tokens, callback )
-
       })
 }
 
@@ -88,10 +87,6 @@ async function refreshToken(tokens, callback)
         }
     })
     .catch( (err)=>{
-        // if( err.response.status)
-        // {
-
-        // }
         authorize( callback )
     })
 }

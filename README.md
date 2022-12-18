@@ -21,6 +21,7 @@ CREATE TABLE toupload(
 
 You should register an application in the Azure portal
 This is the autorisations
+
 - files.readwrite
 - files.readwrite.all
 - offline_access

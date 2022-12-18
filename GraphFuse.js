@@ -2,20 +2,27 @@ var fuse = require('node-fuse-bindings')
 var onedrive=require('./onedrive-c')
 const fs=require('fs')
 const sqlite3 = require('sqlite3')
-const db = new sqlite3.Database('files.sqlite');
+const db = new sqlite3.Database('files.sqlite', (err)=>
+{
+  if (err) {
+      console.error(err.message);
+  } else {
 
-// const strs = require('stringstream')
+    const sql="CREATE TABLE IF NOT EXISTS toupload( id INTEGER primary key,  path TEXT NOT NULL, tmpfile TEXT NOT NULL)";
+    db.exec( sql );
+    
+    console.log('Connected to the database.');
+  }
+});
 
-var mountPath = process.platform !== 'win32' ? '../mnt' : 'M:\\'
+var mountPath = process.platform !== 'win32' ? './mnt' : 'M:\\'
  
-_fileToUpload={size: 0, fileRef:null, buffer:[]}
-
-
+_fileToUpload={size: 0, fileRef:null, buffer:[], tmpName:null}
+// Load the tree
 onedrive.ODInterface(onedrive.buildTreeDelta,
   {nextURI: "", extra: ""}, function(v){ 
     onedrive._lastChecked=new Date(); //.toISOString();
     startMount()
-  
   } 
 )
 
@@ -56,10 +63,6 @@ function startMount()
             _waiting=false
           } 
         )
-        // onedrive.buildTreeDelta("",onedrive._lastChecked.toISOString(),function(v){ 
-        //   _waiting=false
-        // } )
-        // onedrive._lastChecked=new Date();
       }
       var _dir=onedrive.findDir( path, onedrive._structure)
           
@@ -115,7 +118,6 @@ function startMount()
       // created = true
       console.log('Create %s Flag %s', path, flags)
       var _dir=onedrive.findDir( path, onedrive._structure)
-      // console.log( _dir )
       if( flags=33188)
       {
         var _name=path.split('/').pop()
@@ -133,7 +135,7 @@ function startMount()
           gid: process.getgid ? process.getgid() : 0
         }
       }
-      _fileToUpload={size: 0, fileRef:null, buffer:[]}
+      _fileToUpload={size: 0, fileRef:null, buffer:[], tmpName:null, db: null}
       created = true
       cb(0, 42)
     },
@@ -144,11 +146,22 @@ function startMount()
     release: async function (path, fd, cb) {
       var buf=Buffer.concat(_fileToUpload.buffer)
       _fileToUpload.fileRef.end
-      await onedrive.msCreateSession(path, buf,function(expiration,nextExpectedRanges,uploadUrl){
-          onedrive.msUploadBySession(uploadUrl, 0, buf.length,  buf.length, buf, function(d){ console.log(d); 
-            _fileToUpload={size: 0, fileRef:null, buffer:[]}
-          })
-        })
+      // To be refactored
+      // await onedrive.msCreateSession(path, buf,function(expiration,nextExpectedRanges,uploadUrl){
+      //     onedrive.msUploadBySession(uploadUrl, 0, buf.length,  buf.length, buf, function(d){ console.log(d); 
+      //       _fileToUpload={size: 0, fileRef:null, buffer:[]}
+      //     })
+      //   })
+
+      // Since we are going to use the file, 
+
+
+      await onedrive.ODInterface(onedrive.uploadFile, {path:path, tpmName: _fileToUpload.tmpName, size: _fileToUpload.size},function (msg) {
+
+        console.log( done)
+      }
+  
+        )
       cb(0)
     },
     unlink: async function(path, cb) {
@@ -182,13 +195,14 @@ function startMount()
         stmt.finalize();
 
         var stream = fs.createWriteStream(`cache/${tmpName}`);
+        _fileToUpload.tmpName=tmpName
         _fileToUpload.fileRef=stream
-        _fileToUpload={size: 0, fileRef:stream, buffer:[]}
+        _fileToUpload.db = db
+        // _fileToUpload=size: 0, fileRef:stream, buffer:[]}
       }
       // else {
       _fileToUpload.buffer.push(Buffer.from(buf))
       _fileToUpload.fileRef.write(buf)
-
       _fileToUpload.size+=len
       // }
       // |_fileToUpload[path]={size: 0, fileRef:null}
@@ -262,6 +276,13 @@ function startMount()
       } else {
         console.log('filesystem at ' + mountPath + ' unmounted')
       }
-    })
+    });
+    db.close((err) => {
+      if (err) {
+          return console.error(err.message);
+      }
+      console.log('Close the database connection.');
+  });
+
   })
 }

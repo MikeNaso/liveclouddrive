@@ -1,11 +1,9 @@
 const getConfig = require("./config.js");
 const fs=require('fs')
-
-// const ms=require('./ms_auth');
 const ms=require('./graph-autentication')
-const { dir } = require("console");
+// const { dir } = require("console");
 const axios=require('axios')
-const FormData = require('form-data');
+// const FormData = require('form-data');
 const { Interface } = require("readline");
 
 var _retries=0
@@ -13,12 +11,6 @@ const URI='https://graph.microsoft.com/v1.0/me/drive/root/children'
 //https://graph.microsoft.com/v1.0/me/drive/root/delta
 
 //https://learn.microsoft.com/en-us/graph/api/driveitem-list-children?view=graph-rest-1.0&tabs=http
-// /me/drive/items/{item-id}/children
-// /me/drive get Drive
-//GET /drives/{drive-id}/root:/{path-relative-to-root}:/children
-//https://graph.microsoft.com/v1.0/me/drives/b!qhOVwuOSy0SxDbidV4e9Ar_8s0wR7SdNjH5iwojbAdiD8K27trs0T6A_SkalXmAx/root:/Personali:/children
-// https://graph.microsoft.com/v1.0/me/drives/b!qhOVwuOSy0SxDbidV4e9Ar_8s0wR7SdNjH5iwojbAdiD8K27trs0T6A_SkalXmAx/root:/OverLeaf:/children
-//https://graph.microsoft.com/v1.0/drives/b!pmGzHuV9eEe8ruvb5zZEZa334r7ZgwpHhwe8pqaFbQdZCv3KVb-YS7Bx2agw38E1/items/01YMYZCTIHNJZKPQWKWBALU4DFOUMD5PNO/children
 
 class Folder {
     constructor(value) {
@@ -60,14 +52,10 @@ let _lastChecked=new Date() //.toISOString()
 
 function findDir( path, _struct )
 {
-  _path=path.split('/')
+  _path=path.split('/').shift()
   _dir=_struct
   for( var b in _path)
   {
-    if(b==0)
-    {
-      continue
-    }
     if( _path[b]!='' )
     {
       if(_path[b] in _dir.folders)
@@ -78,7 +66,102 @@ function findDir( path, _struct )
   }
   return _dir
 }
-async function msUploadBySession( uri, pos, len, size, content, callback)
+
+async function msUploadFile(opts, cb)
+{
+    // Create Session
+    await msCreateSession(opts, function( expiration, nextExp, url){
+        var readStream = fs.createReadStream(opts.tmpName) //,{ highWaterMark: 64 * 1024, encoding: 'binary' });
+        var data=[];
+        var pos=0;
+        // var buffer=null
+        readStream.on('data', function(chunk) {
+            data.push( chunk);
+        }).on('end', function() {
+            var buf=Buffer.concat(data)
+            var _to=0;
+            if( buf.length>65536)
+            {
+                _to=65536
+            }
+            else{
+                _to=buf.length
+            }
+            msUploadBySession( url, 0, _to, buf, function(r){
+                if( r.status==200 || r.status==202)
+                {
+                    console.log('DONE Upload File ',r.status)
+
+                }
+                
+            } )
+            // console.log(data); 
+        // here you see all data processed at end of file
+            });
+
+    })
+    // Read file
+
+}
+async function msUploadBySession( uri, posFrom, posTo, fullbuf, callback)
+{
+    // var chunk=Buffer.from( content)
+    // var len=chunk.length
+    var size=fullbuf.length
+    var chunk=fullbuf.slice(posFrom,posTo)
+    console.log("************ Pos %s Len %s Size %s ",posFrom,posTo,size)
+    // console.log( Buffer.from(content) )
+    console.log( 'bytes ',(posFrom+'-'+(posFrom+chunk.length-1)+'/'+size) )
+    
+    console.log( 'Chunk size ',chunk.length)
+    await axios.request({
+        baseURL: uri,
+        method: 'put',
+        headers: {
+            // "Content-Type": "application/octet-stream",
+            "Content-Length": chunk.length,
+            "Content-Range": 'bytes '+posFrom+'-'+(posFrom+chunk.length-1)+'/'+size,
+        },      
+        // data: Buffer.from(content) //.slice(pos, (tillPos-1))),
+        data: chunk
+        // responseType: 'stream',
+    }).
+    then( (res)=>{
+        console.log("SPEDITO ",posFrom)
+        
+        if( 'nextExpectedRanges' in res.data)
+        {
+            var nextChunk=res.data.nextExpectedRanges[0].split('-')
+            // console.log( nextChunk)
+            // console.log( nextChunk[0], fullbuf.length, nextChunk[1])
+            // console.log( fullbuf.slice(nextChunk[0],nextChunk[1]) )
+            nextChunk[0]=parseInt(nextChunk[0])
+            nextChunk[1]=parseInt(nextChunk[1])
+            // console.log("Send Next ", nextChunk[0], nextChunk[1])
+            msUploadBySession( uri, nextChunk[0], (nextChunk[1]+1),fullbuf, function(r){
+                console.log('DONE 1 ',r.status)
+                callback(r)
+            } )
+        }
+        callback(res)
+    })
+    .catch( (err) =>{
+        // console.log( err )
+        console.log( err.status)
+        // console.log( err)
+        if( 'data' in err.response)
+        {
+            console.log( err.response.data)
+        }
+        // console.dir( err ,{ depth: null } )
+        console.log("--------------------------------------------------")
+        callback("ERRO")
+    })
+
+}
+
+
+async function msUploadBySessionOLD( uri, pos, len, size, content, callback)
 {
     console.log("************ Pos %s Len %s Size %s Content %s",pos,len,size, content.length)
     console.log( content)
@@ -116,43 +199,48 @@ async function msUploadBySession( uri, pos, len, size, content, callback)
     })
 
 }
-async function msCreateSession(_fileName, mycontent, callback)
+
+//async function msCreateSession(_fileName, mycontent, callback)
+
+async function msCreateSession(opts, callback)
 {
-    var tokens ={}
-    await ms.getStoredToken( function( _token ){
-        tokens=_token
-    })
+    // var tokens ={}
+    // await ms.getStoredToken( function( _token ){
+    //     tokens=_token
+    // })
     // var rawdata= fs.readFileSync('store_tokens.json')
     // var tokens = JSON.parse(rawdata);
-    let _URI=getConfig.apiUrl+`me/drive/items/root:/${ _fileName }:/createUploadSession`
+    // let _URI=getConfig.apiUrl+`me/drive/items/root:/${ _fileName }:/createUploadSession`
     
-    console.log("msCreateSession "+_fileName)
+    console.log("msCreateSession "+opts.path)
     // console.log( mycontent )
+    // console.log( opts)
     await axios.request({
-        url: `me/drive/items/root:/${ _fileName }:/createUploadSession`,
+        url: `me/drive/items/root:/${ opts.path }:/createUploadSession`,
         baseURL: getConfig.apiUrl,
         method: 'post',
         headers: { 
-            Authorization: "Bearer "+tokens.access_token,
+            Authorization: "Bearer "+opts.tokens.access_token,
             "Content-Type": "application/json"
-        }
- 
+        },
+        // data:{item:{
+        //     "@microsoft.graph.conflictBehavior": "replace",
+        //     "description": "Uploaded by .....",
+        //     "fileSize": opts.size,
+        //     "name": opts.path
+        // }}
     })
     .then( (res) =>{
         // console.log( res.data)
-        // console.log( res.data.expirationDateTime)
-        // console.log( res.data.nextExpectedRanges)
-        // console.log( res.data.uploadUrl)
-        //console.log("******************************** "+mycontent)
-        //msUploadBySession(res.data.uploadUrl, mycontent, function(d){ console.log(d); callback("CIAO")})
         callback(res.data.expirationDateTime,  res.data.nextExpectedRanges,res.data.uploadUrl )
     })
     .catch( (err)=>{
-        console.log( err )
-        // if( 401==err.response.status )
-        // {
-        //     //ms.refreshToken()
-        // }
+        console.log( err.response.status )
+        console.log( err.response.data )
+        
+        console.log("---==---")
+        // console.log( err )
+
     })
 }
 
@@ -445,6 +533,20 @@ async function ODInterface(callf, opts, cb )
 
 }
 
+if(1==1){
+    opts={path: "Miofile1.docx", tmpName:'cache/ajsjdds.cached', size: 333117}
+    ms.getToken( async function(token){
+        opts.tokens=token
+        // console.log("DDDDDD")
+        // console.log( opts)
+        msUploadFile(opts, function(c){
+            console.log('CB')
+        })
+        
+    })
+    
+
+}
 module.exports = {
     ODInterface, 
     buildTreeDelta,
@@ -454,6 +556,7 @@ module.exports = {
     msCreateSession,
     msUploadBySession,
     msUnlink,
+    msUploadFile,
     // getStream,
     _elementById,
     _structure,
