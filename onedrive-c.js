@@ -91,7 +91,8 @@ async function msUploadFile(opts, cb)
                 if( r.status==200 || r.status==202)
                 {
                     console.log('DONE Upload File ',r.status)
-
+                    // Remove from the DB and the file
+                    // To be done
                 }
                 
             } )
@@ -533,20 +534,20 @@ async function ODInterface(callf, opts, cb )
 
 }
 
-if(1==1){
-    opts={path: "Miofile1.docx", tmpName:'cache/ajsjdds.cached', size: 333117}
-    ms.getToken( async function(token){
-        opts.tokens=token
-        // console.log("DDDDDD")
-        // console.log( opts)
-        msUploadFile(opts, function(c){
-            console.log('CB')
-        })
+// if(1==2){
+//     opts={path: "Miofile1.docx", tmpName:'cache/ajsjdds.cached', size: 333117}
+//     ms.getToken( async function(token){
+//         opts.tokens=token
+//         // console.log("DDDDDD")
+//         // console.log( opts)
+//         msUploadFile(opts, function(c){
+//             console.log('CB')
+//         })
         
-    })
+//     })
     
 
-}
+// }
 module.exports = {
     ODInterface, 
     buildTreeDelta,

@@ -25,3 +25,6 @@ This is the autorisations
 - files.readwrite
 - files.readwrite.all
 - offline_access
+
+
+**Please don't use in any production**
