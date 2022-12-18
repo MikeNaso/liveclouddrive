@@ -144,8 +144,9 @@ function startMount()
       cb(0)
     },
     release: async function (path, fd, cb) {
+      console.log( "Release ",path)
       var buf=Buffer.concat(_fileToUpload.buffer)
-      _fileToUpload.fileRef.end
+      _fileToUpload.fileRef.end()
       // To be refactored
       // await onedrive.msCreateSession(path, buf,function(expiration,nextExpectedRanges,uploadUrl){
       //     onedrive.msUploadBySession(uploadUrl, 0, buf.length,  buf.length, buf, function(d){ console.log(d); 
@@ -155,13 +156,13 @@ function startMount()
 
       // Since we are going to use the file, 
 
+      // console.log( path )
+      if( _fileToUpload.startSaving==0){
+        _fileToUpload.startSaving=1
 
-      await onedrive.ODInterface(onedrive.uploadFile, {path:path, tpmName: _fileToUpload.tmpName, size: _fileToUpload.size},function (msg) {
-
-        console.log( done)
-      }
-  
-        )
+        await onedrive.ODInterface(onedrive.msUploadFile, {path:path.substring(1), tpmName: 'cache/'+_fileToUpload.tmpName, size: _fileToUpload.size},function (msg) {
+          console.log( done)
+      } )}
       cb(0)
     },
     unlink: async function(path, cb) {
@@ -185,38 +186,36 @@ function startMount()
     },
 
     write: async function(path, fd, buf, len, pos, cb){
-      console.log('writing %s ', path)
+      console.log('writing %s Len %s Pos %s ', path, len, pos)
 
-      if(_fileToUpload.buffer.length==0)
+      if(pos==0)
       {
+        console.log("Open Stream")
         let tmpName=((Math.random() + 1)*99999).toString(16).substring(4);
         const stmt = db.prepare("INSERT INTO toupload (path, tmpfile ) VALUES (?,?)");
         stmt.run(path, tmpName)
         stmt.finalize();
 
-        var stream = fs.createWriteStream(`cache/${tmpName}`);
+        var stream = await fs.createWriteStream(`cache/${tmpName}`);
         _fileToUpload.tmpName=tmpName
         _fileToUpload.fileRef=stream
         _fileToUpload.db = db
-        // _fileToUpload=size: 0, fileRef:stream, buffer:[]}
+        _fileToUpload.startSaving=0
       }
-      // else {
+      else {
+        console.log(pos)
+        _fileToUpload.fileRef.write(Buffer.from(buf))
+        cb(len)
+      }
+      // console.log( Buffer.from(buf) )
       _fileToUpload.buffer.push(Buffer.from(buf))
-      _fileToUpload.fileRef.write(buf)
+      _fileToUpload.fileRef.on('open', async () => {
+        _fileToUpload.fileRef.write(Buffer.from(buf))
+        cb(len)
+      });
+
       _fileToUpload.size+=len
-      // }
-      // |_fileToUpload[path]={size: 0, fileRef:null}
-
-      // onedrive.msCreateSession(path, buf,function(expiration,nextExpectedRanges,uploadUrl){
-      //     // console.log("PRINT CC"+cc); 
-      //     console.log('FFFFINE');
-      //     console.log( buf);
-      //     var tmp=buf.slice(0,len)
-      //     // buf.copy(tmp)
-      //     onedrive.msUploadBySession(uploadUrl, pos, len, tmp, function(d){ console.log(d); })
-      //   })
-
-      cb(len) // we handled all the data
+      
     },
     read: async function (path, fd, buf, len, pos, cb) {
       console.log('read(%s, %d, %d, %d)', path, fd, len, pos)

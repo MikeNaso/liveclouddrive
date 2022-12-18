@@ -70,14 +70,19 @@ function findDir( path, _struct )
 async function msUploadFile(opts, cb)
 {
     // Create Session
+    console.log("MSUPLOAD")
     await msCreateSession(opts, function( expiration, nextExp, url){
-        var readStream = fs.createReadStream(opts.tmpName) //,{ highWaterMark: 64 * 1024, encoding: 'binary' });
+        console.log( opts.tpmName)
+        // console.log( opts)
+        var readStream = fs.createReadStream(opts.tpmName) //,{ highWaterMark: 64 * 1024, encoding: 'binary' });
+        // console.log( readStream)
         var data=[];
         var pos=0;
         // var buffer=null
         readStream.on('data', function(chunk) {
             data.push( chunk);
         }).on('end', function() {
+            console.log( "END READ Stream")
             var buf=Buffer.concat(data)
             var _to=0;
             if( buf.length>65536)
@@ -93,6 +98,7 @@ async function msUploadFile(opts, cb)
                     console.log('DONE Upload File ',r.status)
                     // Remove from the DB and the file
                     // To be done
+                    console.log(opts)
                 }
                 
             } )
@@ -104,6 +110,7 @@ async function msUploadFile(opts, cb)
     // Read file
 
 }
+
 async function msUploadBySession( uri, posFrom, posTo, fullbuf, callback)
 {
     // var chunk=Buffer.from( content)
@@ -236,6 +243,7 @@ async function msCreateSession(opts, callback)
         callback(res.data.expirationDateTime,  res.data.nextExpectedRanges,res.data.uploadUrl )
     })
     .catch( (err)=>{
+        console.log( err )
         console.log( err.response.status )
         console.log( err.response.data )
         
@@ -522,6 +530,7 @@ async function buildTreeDelta( opts, callback )
 
 async function ODInterface(callf, opts, cb )
 {
+    console.log('INTERFACE')
     ms.getToken( async function(token){
         opts.tokens=token
         // console.log("DDDDDD")
