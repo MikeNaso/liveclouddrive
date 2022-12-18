@@ -44,7 +44,7 @@ async function readToken(code)
     })
     .then((res)=>{
         console.log("SAVE")
-        console.log( res.data)
+        // console.log( res.data)
         let obj={access_token: res.data.access_token, refresh_token: res.data.refresh_token}
         let tokens = JSON.stringify( obj );
         fs.writeFileSync("store_tokens.json",tokens)
