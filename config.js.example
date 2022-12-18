@@ -4,5 +4,9 @@ module.exports = {
     client_secret: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx",
     scope:"files.readwrite%20files.readwrite.all%20offline_access",
     redirect: "http://localhost/thisis",
-    loginUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/"
+    baseAuthUrl: "https://login.microsoftonline.com",
+    msAuth: "/common/oauth2/V2.0/",
+    msToken: "/common/oauth2/V2.0/token",
+    cacheDir: "cache/",
+    debug: false
   };

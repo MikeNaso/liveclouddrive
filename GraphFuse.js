@@ -147,21 +147,13 @@ function startMount()
       console.log( "Release ",path)
       var buf=Buffer.concat(_fileToUpload.buffer)
       _fileToUpload.fileRef.end()
-      // To be refactored
-      // await onedrive.msCreateSession(path, buf,function(expiration,nextExpectedRanges,uploadUrl){
-      //     onedrive.msUploadBySession(uploadUrl, 0, buf.length,  buf.length, buf, function(d){ console.log(d); 
-      //       _fileToUpload={size: 0, fileRef:null, buffer:[]}
-      //     })
-      //   })
 
-      // Since we are going to use the file, 
-
-      // console.log( path )
       if( _fileToUpload.startSaving==0){
         _fileToUpload.startSaving=1
 
         await onedrive.ODInterface(onedrive.msUploadFile, {path:path.substring(1), tpmName: 'cache/'+_fileToUpload.tmpName, size: _fileToUpload.size},function (msg) {
           console.log( done)
+          // remove for the db and delete tmp file
       } )}
       cb(0)
     },
