@@ -5,13 +5,32 @@ const open = require('open')
 const killable = require('killable');
 const http = require('http');
 
-async function getToken(code)
-{
-    const URI_TOKEN=getConfig.loginUrl+'token'
 
+async function getToken( callback )
+{
+    var tokens={}
+    await fs.access("store_tokens.json", fs.F_OK, (err) => {
+        if (err || tokens.access_token=='') {
+            tokens = JSON.stringify({access_token: "", refresh_token: ""});
+            fs.writeFileSync("store_tokens.json",tokens)
+            authorize( callback )
+            console.error(err)
+            return
+        }
+        var rawdata= fs.readFileSync('store_tokens.json')
+        tokens = JSON.parse(rawdata);
+        // Here we should change using the timestamp and the expiration time to doit only if needed
+        refreshToken( tokens, callback )
+
+      })
+}
+
+async function readToken(code)
+{
+    console.log(getConfig.baseAuthUrl+getConfig.msToken)
     axios.request({
-        url: "/common/oauth2/v2.0/token",
-        baseURL: "https://login.microsoftonline.com/",
+        url: getConfig.msToken,
+        baseURL: getConfig.baseAuthUrl,
         method: 'post',
         data: {
             grant_type: 'authorization_code',
@@ -25,25 +44,29 @@ async function getToken(code)
         }
     })
     .then((res)=>{
-        let tokens = JSON.stringify({access_token: res.data.access_token, refresh_token: res.data.refresh_token});
+        console.log("SAVE")
+        console.log( res.data)
+        let obj={access_token: res.data.access_token, refresh_token: res.data.refresh_token}
+        let tokens = JSON.stringify( obj );
         fs.writeFileSync("store_tokens.json",tokens)
-        return tokens
+        return obj
     })
     .catch( (err)=>{
-        console.log( err)
+        // console.log("ERRR")
+        // console.log( err)
+        // This should be modify
+        // authorize()
 
     })
 }
 
-async function refreshToken(cb)
+async function refreshToken(tokens, callback)
 {
-    console.log( "Refresh 1")
-    let rawdata= fs.readFileSync('store_tokens.json')
-    let tokens = JSON.parse(rawdata);
+    console.log( "Refresh Token")
 
     axios.request({
-        url: "/common/oauth2/v2.0/token",
-        baseURL: "https://login.microsoftonline.com/",
+        url: getConfig.msAuth+'Token',
+        baseURL:  getConfig.baseAuthUrl,
         method: 'post',
         data: {
             grant_type: 'refresh_token',
@@ -56,37 +79,38 @@ async function refreshToken(cb)
             'Content-Type': 'application/x-www-form-urlencoded'
         }
     }).then( (response)=>{
-        // console.log( response)
         if( 200==response.request.res.statusCode)
         {
-            // console.log(response.data)
-            let tokens = JSON.stringify({access_token: response.data.access_token, refresh_token: response.data.refresh_token});
+            let obj = {access_token: response.data.access_token, refresh_token: response.data.refresh_token}
+            let tokens = JSON.stringify( obj );
             fs.writeFileSync("store_tokens.json",tokens)
-            cb(0)
+            callback( obj )
         }
     })
     .catch( (err)=>{
-        console.log("ERR")
-        console.log( err.response.status)
-        authorize()
-        // console.log( err.response.statusCode )
-        // 400 Wrong
+        // if( err.response.status)
+        // {
+
+        // }
+        authorize( callback )
     })
 }
 
-async function authorize()
-{
-    const URI=getConfig.loginUrl+'authorize?client_id='+getConfig.client_id+'&scope='+getConfig.scope+'&response_type=code&redirect_uri='+getConfig.redirect
-
+async function authorize( callback )
+{   
+    console.log("Authorize")
+    const URI=getConfig.baseAuthUrl+getConfig.msAuth+'authorize?client_id='+getConfig.client_id+'&scope='+getConfig.scope+'&response_type=code&redirect_uri='+getConfig.redirect
+    // console.log( URI )
     open(URI)
 
     var server=http.createServer(function (req, res) {
         var code=req.url.match(/code=([^&]+)/m)
         if( code )
         {
+            // We should write something more meaningfull
             res.write('OK!'); //write a response to the client
             res.end(); //end the response
-            getToken( code[1] )
+            readToken( code[1], callback )
             // server.kill()
             server.close()
         }
@@ -97,23 +121,6 @@ async function authorize()
     }).listen(80); 
 }
 
-// async () => res = await refresh()
-// var form = new FormData();
-// form.append('grant_type', 'refresh_token');
-// form.append('refresh_token', tokens.refresh_token );
-// form.append('redirect_uri', getConfig.redirect);
-// form.append('client_id',  getConfig.client_id);
-// form.append('client_secret', getConfig.client_secret);
-
-// got.post(getConfig.loginUrl+"token",{body: form,responseType: 'json'}).then((res)=>{
-//     let tokens = JSON.stringify({access_token: res.body.access_token, refresh_token: res.body.refresh_token});
-//     fs.writeFileSync("store_tokens.json",tokens)
-// //   console.log( res)
-// }).catch(err => {
-//     fs.writeFileSync("store_tokens.json",JSON.stringify({access_token: "", refresh_token: ""}))
-//     authorize()
-// });
-// console.log( "Refresh 2")
 module.exports = {
-    refreshToken,
+    getToken,
 }

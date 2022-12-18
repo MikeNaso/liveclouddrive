@@ -15,5 +15,9 @@
   "bugs": {
     "url": "https://github.com/pbxip/liveclouddrive/issues"
   },
-  "homepage": "https://github.com/pbxip/liveclouddrive#readme"
+  "homepage": "https://github.com/pbxip/liveclouddrive#readme",
+  "dependencies": {
+    "fs": "^0.0.1-security",
+    "sqlite3": "^5.1.4"
+  }
 }
