@@ -72,10 +72,10 @@ async function msUploadFile(opts, cb)
     // Create Session
     console.log("MSUPLOAD")
     await msCreateSession(opts, function( expiration, nextExp, url){
-        console.log( opts.tpmName)
+        
         // console.log( opts)
+        console.log( opts.tpmName)
         var readStream = fs.createReadStream(opts.tpmName) //,{ highWaterMark: 64 * 1024, encoding: 'binary' });
-        // console.log( readStream)
         var data=[];
         var pos=0;
         // var buffer=null
@@ -98,7 +98,8 @@ async function msUploadFile(opts, cb)
                     console.log('DONE Upload File ',r.status)
                     // Remove from the DB and the file
                     // To be done
-                    console.log(opts)
+                    // console.log(opts)
+                    cb(r.status)
                 }
                 
             } )
@@ -212,14 +213,6 @@ async function msUploadBySessionOLD( uri, pos, len, size, content, callback)
 
 async function msCreateSession(opts, callback)
 {
-    // var tokens ={}
-    // await ms.getStoredToken( function( _token ){
-    //     tokens=_token
-    // })
-    // var rawdata= fs.readFileSync('store_tokens.json')
-    // var tokens = JSON.parse(rawdata);
-    // let _URI=getConfig.apiUrl+`me/drive/items/root:/${ _fileName }:/createUploadSession`
-    
     console.log("msCreateSession "+opts.path)
     // console.log( mycontent )
     // console.log( opts)
@@ -407,8 +400,6 @@ async function buildTreeDelta( opts, callback )
         headers: {"Authorization": "Bearer "+opts.tokens.access_token}
     })
     .then((res)=>{ 
-        console.log("RES")
-        // console.log( res )
         var _list=[]
         _nextLink=''
         if( "@odata.nextLink" in res.data)

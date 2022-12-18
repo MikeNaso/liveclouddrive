@@ -1,23 +1,24 @@
 var fuse = require('node-fuse-bindings')
 var onedrive=require('./onedrive-c')
 const fs=require('fs')
-const sqlite3 = require('sqlite3')
-const db = new sqlite3.Database('files.sqlite', (err)=>
-{
-  if (err) {
-      console.error(err.message);
-  } else {
+// const sqlite3 = require('sqlite3')
+const getConfig = require("./config.js");
+// const db = new sqlite3.Database('files.sqlite', (err)=>
+// {
+//   if (err) {
+//       console.error(err.message);
+//   } else {
 
-    const sql="CREATE TABLE IF NOT EXISTS toupload( id INTEGER primary key,  path TEXT NOT NULL, tmpfile TEXT NOT NULL)";
-    db.exec( sql );
+//     const sql="CREATE TABLE IF NOT EXISTS toupload( id INTEGER primary key,  path TEXT NOT NULL, tmpfile TEXT NOT NULL)";
+//     db.exec( sql );
     
-    console.log('Connected to the database.');
-  }
-});
+//     console.log('Connected to the database.');
+//   }
+// });
 
 var mountPath = process.platform !== 'win32' ? './mnt' : 'M:\\'
- 
-_fileToUpload={size: 0, fileRef:null, buffer:[], tmpName:null}
+_fileToUpload={}
+// _fileToUpload={size: 0, fileRef:null, buffer:[], tmpName:null}
 // Load the tree
 onedrive.ODInterface(onedrive.buildTreeDelta,
   {nextURI: "", extra: ""}, function(v){ 
@@ -145,14 +146,14 @@ function startMount()
     },
     release: async function (path, fd, cb) {
       console.log( "Release ",path)
-      var buf=Buffer.concat(_fileToUpload.buffer)
+      // var buf=Buffer.concat(_fileToUpload.buffer)
       _fileToUpload.fileRef.end()
 
       if( _fileToUpload.startSaving==0){
         _fileToUpload.startSaving=1
-
-        await onedrive.ODInterface(onedrive.msUploadFile, {path:path.substring(1), tpmName: 'cache/'+_fileToUpload.tmpName, size: _fileToUpload.size},function (msg) {
-          console.log( done)
+        
+        await onedrive.ODInterface(onedrive.msUploadFile, {path:path.substring(1), tpmName: _fileToUpload.tmpName, size: _fileToUpload.size} ,function (msg) {
+          console.log( "Msg Uploaded",msg)
           // remove for the db and delete tmp file
       } )}
       cb(0)
@@ -183,24 +184,27 @@ function startMount()
       if(pos==0)
       {
         console.log("Open Stream")
-        let tmpName=((Math.random() + 1)*99999).toString(16).substring(4);
-        const stmt = db.prepare("INSERT INTO toupload (path, tmpfile ) VALUES (?,?)");
-        stmt.run(path, tmpName)
-        stmt.finalize();
+        let tmpName=getConfig.cacheDir+((Math.random() + 1)*99999).toString(16).substring(4);
+        // const stmt = db.prepare("INSERT INTO toupload (path, tmpfile ) VALUES (?,?)");
+        // await stmt.run(path, tmpName, function(err){
+        //   console.log( err )
+        //   console.log("FFFFIIIINNNNEEEE")
+        // })
+        // stmt.finalize();
 
-        var stream = await fs.createWriteStream(`cache/${tmpName}`);
+        var stream = await fs.createWriteStream(`${tmpName}`);
         _fileToUpload.tmpName=tmpName
         _fileToUpload.fileRef=stream
-        _fileToUpload.db = db
+        // _fileToUpload.db = db
         _fileToUpload.startSaving=0
       }
       else {
-        console.log(pos)
+        // console.log(pos)
         _fileToUpload.fileRef.write(Buffer.from(buf))
         cb(len)
       }
       // console.log( Buffer.from(buf) )
-      _fileToUpload.buffer.push(Buffer.from(buf))
+      // _fileToUpload.buffer.push(Buffer.from(buf))
       _fileToUpload.fileRef.on('open', async () => {
         _fileToUpload.fileRef.write(Buffer.from(buf))
         cb(len)
@@ -268,12 +272,12 @@ function startMount()
         console.log('filesystem at ' + mountPath + ' unmounted')
       }
     });
-    db.close((err) => {
-      if (err) {
-          return console.error(err.message);
-      }
-      console.log('Close the database connection.');
-  });
+  //   db.close((err) => {
+  //     if (err) {
+  //         return console.error(err.message);
+  //     }
+  //     console.log('Close the database connection.');
+  // });
 
   })
 }
