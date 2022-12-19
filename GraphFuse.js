@@ -3,6 +3,8 @@ var onedrive=require('./onedrive-c')
 const fs=require('fs')
 const sqlite3 = require('sqlite3')
 const getConfig = require("./config.js");
+require('console-stamp')(console, '[HH:MM:ss.l]');
+
 let db = new sqlite3.Database("livedrivecloud.db");
 db.run("CREATE TABLE IF NOT EXISTS toupload( path TEXT NOT NULL primary key, tmpfile TEXT NOT NULL, superseeded INT DEFAULT 0)")
 
@@ -10,7 +12,7 @@ _fileToUpload={}
 
 onedrive.ODInterface(onedrive.buildTreeDelta,
   {nextURI: "", extra: ""}, function(v){ 
-    onedrive._lastChecked=new Date(); //.toISOString();
+    onedrive._lastChecked=new Date(); 
     startMount()
   } 
 )
@@ -54,14 +56,11 @@ function startMount()
       console.log( _dir )
       var _files=[]
       for( var b in _dir.folders)
-      {
         _files.push(_dir.folders[b]['name'])
-      }
+      
       for( var b in _dir.files)
-      {
         _files.push(_dir.files[b]['name'])
-      }
-      // console.log(_files)
+      
       return cb(0, _files)
     },
     getattr:  function (path, cb) {
@@ -96,23 +95,16 @@ function startMount()
       }
       else if( _file in _dir.files)
       { 
-        // console.log(_dir.files[_file])
-        //cb(0, _dir.files[_file])
         cb(null, _dir.files[_file])
-
         return
       }
       else if( _file in _dir.folders)
       {
-        console.log("This is folder")
-
         cb(0, _dir.folders[_file])
         return
       }
       else if( _dir.name==_file )
       {
-        console.log( "Folder "+_file)
-        // console.log( _dir.folders[_file])
         cb(0, _dir)
         return
       }
@@ -129,15 +121,14 @@ function startMount()
       var _dir=onedrive.findDir( path, onedrive._structure)
       var _file=path.split('/').pop()
       if (_file in _dir.files)
-      {
         _dir.files[_file].size=0
-      }
+
       // SET THE FILE TO 0 SIZE or remove it to decide
       cb(0)
     },
     chmod: function(path, mode, cb)
     {
-      console.log('CHMOD %s Mode %s', path, mode)
+      console.log('Chmod %s Mode %s', path, mode)
       cb(0)
     },
     create: function (path, flags, cb) {
@@ -170,32 +161,28 @@ function startMount()
       cb(0)
     },
     release: async function (path, fd, cb) {
-      console.log( "Release ",path, new Date())
+      console.log( "Release ",path)
       // Called agter read or write finish
       // var buf=Buffer.concat(_fileToUpload.buffer)
       _fileToUpload.fileRef.end()
 
       if( "startSaving" in _fileToUpload && _fileToUpload.startSaving==0){
         _fileToUpload.startSaving=1
-        console.log("Saving on cloud ", new Date())
+        console.log("Saving on cloud ")
         await onedrive.ODInterface(onedrive.msUploadFile, {path:path.substring(1), tpmName: _fileToUpload.tmpName, size: _fileToUpload.size} ,function (msg) {
           console.log( "Msg Uploaded",msg)
           db.run('DELETE FROM toupload WHERE path=?',[path], function(err) {
             if( err)
-            {
               console.log("Cannot delete ", err.message)
-            }
             else {
               console.log("Unlink ",_fileToUpload.tmpName)
               fs.unlink(_fileToUpload.tmpName,(err=>{
                 if( err) console.log( err)
-                else {
+                else 
                   _fileToUpload={}
-                }
               }))
             }
-          })
-          
+          }) 
           // remove for the db and delete tmp file
       } )}
       cb(0)
@@ -204,7 +191,6 @@ function startMount()
       console.log('Unlink '+path)
       _dir=onedrive.findDir(path, onedrive._structure)
       _file=path.split('/').pop()
-      // msUnlink
       if( _file in _dir.files)
       {
         console.log( _dir.files[_file]['id'])
@@ -277,21 +263,17 @@ function startMount()
         cb(0)
         return
       }
-      // var str = 'hello world\n'.slice(pos, pos + len)
       var _response=''
       var _link=''
       var _info=0
       await onedrive.msDownload(path,function(info, response){ 
         console.log( 'INFO ', info)
         _info=info
-        if( info==200) {
+        if( info==200)
           _link=response
-        } 
       })
       if( _info!=200)
-      {
         return cb(0)
-      }
       if( _link!='')
       {
         await onedrive.msDownloadPartial(_link, pos+'-'+(len+pos)
@@ -299,16 +281,13 @@ function startMount()
             console.log( response.length)
             console.log( '===========> Info '+info )
             if( info==200)
-            {
               _response=response
-            }
-            else {
+            else 
               return cb(0)
-            }
         })
       }
 
-      console.log( "Size "+_response.length)
+      // console.log( "Size "+_response.length)
       var part=_response.slice( pos, pos+len)
       part.copy(buf)
       return cb(part.length) //_response.length)

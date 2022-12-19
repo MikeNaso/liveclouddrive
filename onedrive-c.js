@@ -54,19 +54,15 @@ function findDir( path, _struct )
 {
     console.log("FindDir ", path)
     _path=path.split('/')
-    //.shift()
-    // console.log(_path)
+
     _dir=_struct
-    // console.dir( _dir )
     
     for( var b in _path)
     {
         if( _path[b]!='' )
         {
-        if(_path[b] in _dir.folders)
-        {
-            _dir=_dir.folders[_path[b]]
-        }
+            if(_path[b] in _dir.folders)
+                _dir=_dir.folders[_path[b]]
         }
     }
   return _dir
@@ -75,12 +71,9 @@ function findDir( path, _struct )
 async function msUploadFile(opts, cb)
 {
     // Create Session
-    console.log("MSUPLOAD")
+    console.log("msUploadFile")
     await msCreateSession(opts, function( expiration, nextExp, url){
-        
-        // console.log( opts)
-        console.log( opts.tpmName)
-        var readStream = fs.createReadStream(opts.tpmName) //,{ highWaterMark: 64 * 1024, encoding: 'binary' });
+        var readStream = fs.createReadStream(opts.tpmName) 
         var data=[];
         var pos=0;
         // var buffer=null
@@ -100,10 +93,7 @@ async function msUploadFile(opts, cb)
             msUploadBySession( url, 0, _to, buf, function(r){
                 if( r.status==200 || r.status==202)
                 {
-                    console.log('DONE Upload File ',r.status)
-                    // Remove from the DB and the file
-                    // To be done
-                    // console.log(opts)
+                    console.log('Upload File Done',r.status)
                     cb(r.status)
                 }
                 
@@ -119,8 +109,6 @@ async function msUploadFile(opts, cb)
 
 async function msUploadBySession( uri, posFrom, posTo, fullbuf, callback)
 {
-    // var chunk=Buffer.from( content)
-    // var len=chunk.length
     var size=fullbuf.length
     var chunk=fullbuf.slice(posFrom,posTo)
     console.log("************ Pos %s Len %s Size %s ",posFrom,posTo,size)
@@ -132,13 +120,10 @@ async function msUploadBySession( uri, posFrom, posTo, fullbuf, callback)
         baseURL: uri,
         method: 'put',
         headers: {
-            // "Content-Type": "application/octet-stream",
             "Content-Length": chunk.length,
             "Content-Range": 'bytes '+posFrom+'-'+(posFrom+chunk.length-1)+'/'+size,
         },      
-        // data: Buffer.from(content) //.slice(pos, (tillPos-1))),
         data: chunk
-        // responseType: 'stream',
     }).
     then( (res)=>{
         console.log("Sent ",posFrom)
@@ -146,12 +131,8 @@ async function msUploadBySession( uri, posFrom, posTo, fullbuf, callback)
         if( 'nextExpectedRanges' in res.data)
         {
             var nextChunk=res.data.nextExpectedRanges[0].split('-')
-            // console.log( nextChunk)
-            // console.log( nextChunk[0], fullbuf.length, nextChunk[1])
-            // console.log( fullbuf.slice(nextChunk[0],nextChunk[1]) )
             nextChunk[0]=parseInt(nextChunk[0])
             nextChunk[1]=parseInt(nextChunk[1])
-            // console.log("Send Next ", nextChunk[0], nextChunk[1])
             msUploadBySession( uri, nextChunk[0], (nextChunk[1]+1),fullbuf, function(r){
                 console.log('DONE 1 ',r.status)
                 callback(r)
@@ -160,16 +141,12 @@ async function msUploadBySession( uri, posFrom, posTo, fullbuf, callback)
         callback(res)
     })
     .catch( (err) =>{
-        // console.log( err )
         console.log( err.status)
-        // console.log( err)
         if( 'response' in err && 'data' in err.response)
         {
             console.log( err.response.data)
         }
         else console.log( err)
-        // console.dir( err ,{ depth: null } )
-        console.log("--------------------------------------------------")
         callback("ERRO")
     })
 
@@ -181,47 +158,32 @@ async function msUploadBySessionOLD( uri, pos, len, size, content, callback)
     console.log("************ Pos %s Len %s Size %s Content %s",pos,len,size, content.length)
     console.log( content)
     await axios.request({
-        // url: `me/drive/items/root:/${ _fileName }:/createUploadSession`,
         baseURL: uri,
         method: 'put',
         headers: {
-            // "Content-Type": "application/octet-stream",
             "Content-Length": len,
             "Content-Range": 'bytes '+pos+'-'+(pos+len-1)+'/'+(pos+len),
         },      
-        // data: Buffer.from(content) //.slice(pos, (tillPos-1))),
         data: content
-        // responseType: 'stream',
     }).
     then( (res)=>{
-        // if( res.status==200 )
-        // {
-        //     console.log("CCCC")
-        // }
         console.log( res.status)
         console.log( res.size)
         callback(res.size)
     })
     .catch( (err) =>{
-
         console.log("--------------------------------------------------")
         console.log( err.response.status)
         console.log( err.data )
-        // console.log( err.response.status )
-        // console.log( err.response.data )
-        // console.log( form)
         callback("ERRO")
     })
 
 }
 
-//async function msCreateSession(_fileName, mycontent, callback)
-
 async function msCreateSession(opts, callback)
 {
     console.log("msCreateSession "+opts.path)
-    // console.log( mycontent )
-    // console.log( opts)
+
     await axios.request({
         url: `me/drive/items/root:/${ opts.path }:/createUploadSession`,
         baseURL: getConfig.apiUrl,
@@ -238,7 +200,6 @@ async function msCreateSession(opts, callback)
         // }}
     })
     .then( (res) =>{
-        // console.log( res.data)
         callback(res.data.expirationDateTime,  res.data.nextExpectedRanges,res.data.uploadUrl )
     })
     .catch( (err)=>{
@@ -258,8 +219,6 @@ async function msUnlink( _itemId, callback)
     await ms.getStoredToken( function( _token ){
         tokens=_token
     })
-    // var rawdata= fs.readFileSync('store_tokens.json')
-    // var tokens = JSON.parse(rawdata);
   
     console.log("msUnlink "+_itemId)
     // console.log( mycontent )
@@ -282,13 +241,9 @@ async function msUnlink( _itemId, callback)
 
 async function msDownloadPartial( _uri, _range, callback)
 {
-        // console.log( _uri )
-        //arraybuffer
-//        _body= {responseType: 'arraybuffer'}
-        if( _range!='') {
+        if( _range!='') 
             _body={headers: {Range: 'bytes='+_range},responseType: 'arraybuffer'}
-            //, responseType: 'blob'}
-        }
+
         await axios.get(_uri, _body)
         .then( 
             (res) => { 
@@ -340,14 +295,9 @@ async function msDownload( _path, callback)
             _itemId=_dir.files[_file]['id']
         }
     }
-    else {
+    else 
         console.log( _dir)
-    }
-    // console.log( _paths)
-    //     callback('400','')
-    // return
-    // var rawdata= fs.readFileSync('store_tokens.json')
-    // var tokens = JSON.parse(rawdata);
+    
     var tokens=ms.getStoredToken()
     _URI=getConfig.apiUrl+'me/drive/items/'+_itemId+'?select=id,@microsoft.graph.downloadUrl'
     await axios.get(_URI, {    
@@ -359,13 +309,11 @@ async function msDownload( _path, callback)
             callback('200', res.data['@microsoft.graph.downloadUrl'])
         else
         {
-            // console.log( res.data)
             console.log('MSDownload concluded')
             callback("400","")
         }
     })
     .catch( (err)=>{
-        // console.log( err )
         if( err.response==401)
         {
             console.log("*********** RENEW TOKEN!!!!!") 
@@ -395,9 +343,7 @@ async function buildTreeDelta( opts, callback )
     {
         opts.nextURI=getConfig.apiUrl+'me/drive/items/root/delta'
         if( opts.extra!='')
-        {
             opts.nextURI+='?token='+encodeURI(opts.extra)
-        }
     }
 
     await axios.get(opts.nextURI, 
@@ -432,12 +378,10 @@ async function buildTreeDelta( opts, callback )
                 folders: []
             }
             
-            // console.log( res.body.value[i]['parentReference']['path'])
             _path=res.data.value[i]['parentReference']['path'].split(':')
             _path=_path[1].split('/')
-            // console.log( _path)
+
             _dir=_structure
-            // console.log(_dir)
             for( var p in _path)
             {
                 // r='/'
@@ -483,9 +427,7 @@ async function buildTreeDelta( opts, callback )
                 }
             }
             else if( 'folders')
-            {
                 _elementById[res.data.value[i]['id']]=_dir.files[res.data.value[i]['name']]
-            }
             
         }
         if( _nextLink!='')
@@ -500,25 +442,9 @@ async function buildTreeDelta( opts, callback )
     }).catch( err=>{
         console.log( err.response.status )
         if( err.response.status==401)
-        {
             console.log("*********** RENEW TOKEN!!!!!") 
-            // if (_retries<2) {
-                // console.log("DD")
-                // ms.refreshToken()
-                // ms.refreshToken(function(a){
-                //     console.log("Refreshed")
-                //     onedrive.buildTreeDelta("","",function(v){ 
-                //         console.log("Readed tree after the token refreshed")
-                //     })
-                // })
-                // console.log("CC")
-            // }
-            _retries++;
-        }
-        else{
+        else
             console.log( err.response.data)
-
-        }
         callback(err.response.status)
         // console.log(err.code)
     })
@@ -540,20 +466,6 @@ async function ODInterface(callf, opts, cb )
 
 }
 
-// if(1==2){
-//     opts={path: "Miofile1.docx", tmpName:'cache/ajsjdds.cached', size: 333117}
-//     ms.getToken( async function(token){
-//         opts.tokens=token
-//         // console.log("DDDDDD")
-//         // console.log( opts)
-//         msUploadFile(opts, function(c){
-//             console.log('CB')
-//         })
-        
-//     })
-    
-
-// }
 module.exports = {
     ODInterface, 
     buildTreeDelta,
