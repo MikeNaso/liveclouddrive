@@ -57,7 +57,7 @@ function findDir( path, _struct )
     //.shift()
     // console.log(_path)
     _dir=_struct
-    console.dir( _dir )
+    // console.dir( _dir )
     
     for( var b in _path)
     {
