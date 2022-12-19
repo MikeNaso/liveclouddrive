@@ -13,11 +13,7 @@ At this moment it seems that it is able to read file, almost refined the save pr
 
 This is the table in the livedrivecloud.db
 
-CREATE TABLE toupload(
-        id INTEGER primary key,
-        path TEXT NOT NULL,
-        tmpfile TEXT NOT NULL
-);
+CREATE TABLE IF NOT EXISTS toupload ( path TEXT NOT NULL primary key, tmpfile TEXT NOT NULL)
 
 You should register an application in the Azure portal
 This is the autorisations

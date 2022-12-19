@@ -158,10 +158,11 @@ async function msUploadBySession( uri, posFrom, posTo, fullbuf, callback)
         // console.log( err )
         console.log( err.status)
         // console.log( err)
-        if( 'data' in err.response)
+        if( 'response' in err && 'data' in err.response)
         {
             console.log( err.response.data)
         }
+        else console.log( err)
         // console.dir( err ,{ depth: null } )
         console.log("--------------------------------------------------")
         callback("ERRO")

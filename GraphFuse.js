@@ -4,7 +4,7 @@ const fs=require('fs')
 const sqlite3 = require('sqlite3')
 const getConfig = require("./config.js");
 let db = new sqlite3.Database("livedrivecloud.db");
-db.run("CREATE TABLE IF NOT EXISTS toupload( id INTEGER primary key,  path TEXT NOT NULL, tmpfile TEXT NOT NULL)")
+db.run("CREATE TABLE IF NOT EXISTS toupload( path TEXT NOT NULL primary key, tmpfile TEXT NOT NULL, superseeded INT DEFAULT 0)")
 
 _fileToUpload={}
 
@@ -28,13 +28,11 @@ function startMount()
         var stats=fs.statSync(row.tmpfile)
         onedrive.ODInterface(onedrive.msUploadFile, {path:row.path.substring(1), tpmName: row.tmpfile, size: stats.size} ,function (msg) {
           console.log( "Msg Uploaded",msg)
-          db.run('DELETE FROM toupload WHERE path=?',[path], function(err) {
+          db.run('DELETE FROM toupload WHERE path=?',[row.path], function(err) {
             if( err)
-            {
               console.log("Cannot delete ", err.message)
-            }
             else {
-              fs.unlink(_fileToUpload.tmpName,(err=>{
+              fs.unlink(row.tmpfile,(err=>{
                 if( err) console.log( err)
                 else {
                   _fileToUpload={}
@@ -233,6 +231,9 @@ function startMount()
       {
         console.log("Open Stream")
         let tmpName=getConfig.cacheDir+((Math.random() + 1)*99999).toString(16).substring(4);
+        
+        // You should check if there is a previous path, if it is the case remove it
+
         let stmt=db.run("INSERT INTO toupload (path, tmpfile ) VALUES (?,?)",[path, tmpName], function(err){
           if(err) {
             console.log("Cannot save ", err.message)
