@@ -7,11 +7,11 @@ I am planning to add OneDrive support in a project developed in nodejs, since I 
 A couple of days ago I developed this app, in order to create a virtual file system using Fuse (using node fuse bindings) and I developed a graph authentication and OneDrive connected.
 
 
-You need to create a dir mnt, cache and the files.db
+You need to create a dir mnt, cache and the livedrivecloud.db
 
-At this moment it seems that it is able to read file, almost refined the save
+At this moment it seems that it is able to read file, almost refined the save procedure
 
-This is the table in the files.sqlite
+This is the table in the livedrivecloud.db
 
 CREATE TABLE toupload(
         id INTEGER primary key,
@@ -29,4 +29,3 @@ This is the autorisations
 
 **Please don't use in any production**
 
-If file exists you should wait 15 seconds if replaced before closing the app

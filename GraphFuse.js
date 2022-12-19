@@ -1,25 +1,13 @@
 var fuse = require('node-fuse-bindings')
 var onedrive=require('./onedrive-c')
 const fs=require('fs')
-// const sqlite3 = require('sqlite3')
+const sqlite3 = require('sqlite3')
 const getConfig = require("./config.js");
-// const db = new sqlite3.Database('files.sqlite', (err)=>
-// {
-//   if (err) {
-//       console.error(err.message);
-//   } else {
+let db = new sqlite3.Database("livedrivecloud.db");
+db.run("CREATE TABLE IF NOT EXISTS toupload( id INTEGER primary key,  path TEXT NOT NULL, tmpfile TEXT NOT NULL)")
 
-//     const sql="CREATE TABLE IF NOT EXISTS toupload( id INTEGER primary key,  path TEXT NOT NULL, tmpfile TEXT NOT NULL)";
-//     db.exec( sql );
-    
-//     console.log('Connected to the database.');
-//   }
-// });
-
-// var mountPath = process.platform !== 'win32' ? './mnt' : 'M:\\'
 _fileToUpload={}
-// _fileToUpload={size: 0, fileRef:null, buffer:[], tmpName:null}
-// Load the tree
+
 onedrive.ODInterface(onedrive.buildTreeDelta,
   {nextURI: "", extra: ""}, function(v){ 
     onedrive._lastChecked=new Date(); //.toISOString();
@@ -31,7 +19,33 @@ function startMount()
 {
   _dir=onedrive._structure
   _waiting=false
-
+  db.all( "SELECT * FROM toupload",[],(err,rows)=>{
+    if( err) console.log( err);
+    else{
+      rows.forEach( (row)=>{
+        //id,path, tmpfile
+        console.log( row );
+        var stats=fs.statSync(row.tmpfile)
+        onedrive.ODInterface(onedrive.msUploadFile, {path:row.path.substring(1), tpmName: row.tmpfile, size: stats.size} ,function (msg) {
+          console.log( "Msg Uploaded",msg)
+          db.run('DELETE FROM toupload WHERE path=?',[path], function(err) {
+            if( err)
+            {
+              console.log("Cannot delete ", err.message)
+            }
+            else {
+              fs.unlink(_fileToUpload.tmpName,(err=>{
+                if( err) console.log( err)
+                else {
+                  _fileToUpload={}
+                }
+              }))
+            }
+          })
+        })
+      })
+    }
+  })
   fuse.mount(getConfig.mountPath, {
     // Force Umount
     force: true,
@@ -165,7 +179,21 @@ function startMount()
         console.log("START SAVING ", new Date())
         await onedrive.ODInterface(onedrive.msUploadFile, {path:path.substring(1), tpmName: _fileToUpload.tmpName, size: _fileToUpload.size} ,function (msg) {
           console.log( "Msg Uploaded",msg)
-          _fileToUpload={}
+          db.run('DELETE FROM toupload WHERE path=?',[path], function(err) {
+            if( err)
+            {
+              console.log("Cannot delete ", err.message)
+            }
+            else {
+              fs.unlink(_fileToUpload.tmpName,(err=>{
+                if( err) console.log( err)
+                else {
+                  _fileToUpload={}
+                }
+              }))
+            }
+          })
+          
           // remove for the db and delete tmp file
       } )}
       cb(0)
@@ -205,12 +233,11 @@ function startMount()
       {
         console.log("Open Stream")
         let tmpName=getConfig.cacheDir+((Math.random() + 1)*99999).toString(16).substring(4);
-        // const stmt = db.prepare("INSERT INTO toupload (path, tmpfile ) VALUES (?,?)");
-        // await stmt.run(path, tmpName, function(err){
-        //   console.log( err )
-        //   console.log("FFFFIIIINNNNEEEE")
-        // })
-        // stmt.finalize();
+        let stmt=db.run("INSERT INTO toupload (path, tmpfile ) VALUES (?,?)",[path, tmpName], function(err){
+          if(err) {
+            console.log("Cannot save ", err.message)
+          }
+        })
 
         var stream = await fs.createWriteStream(`${tmpName}`);
         _fileToUpload.tmpName=tmpName
@@ -283,23 +310,23 @@ function startMount()
     }
   }, function (err) {
     if (err) throw err
-    console.log('filesystem mounted on ' + mountPath)
+    console.log('filesystem mounted on ' + getConfig.mountPath)
   })
   
   process.on('SIGINT', function () {
-    fuse.unmount(mountPath, function (err) {
+    fuse.unmount(getConfig.mountPath, function (err) {
       if (err) {
-        console.log('filesystem at ' + mountPath + ' not unmounted', err)
+        console.log('filesystem at ' + getConfig.mountPath + ' not unmounted', err)
       } else {
-        console.log('filesystem at ' + mountPath + ' unmounted')
+        console.log('filesystem at ' + getConfig.mountPath + ' unmounted')
       }
     });
-  //   db.close((err) => {
-  //     if (err) {
-  //         return console.error(err.message);
-  //     }
-  //     console.log('Close the database connection.');
-  // });
+    db.close((err) => {
+      if (err) {
+          return console.error(err.message);
+      }
+      console.log('Close the database connection.');
+  });
 
   })
 }
