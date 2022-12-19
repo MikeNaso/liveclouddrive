@@ -52,18 +52,23 @@ let _lastChecked=new Date() //.toISOString()
 
 function findDir( path, _struct )
 {
-  _path=path.split('/').shift()
-  _dir=_struct
-  for( var b in _path)
-  {
-    if( _path[b]!='' )
+    console.log("FindDir ", path)
+    _path=path.split('/')
+    //.shift()
+    // console.log(_path)
+    _dir=_struct
+    console.dir( _dir )
+    
+    for( var b in _path)
     {
-      if(_path[b] in _dir.folders)
-      {
-        _dir=_dir.folders[_path[b]]
-      }
+        if( _path[b]!='' )
+        {
+        if(_path[b] in _dir.folders)
+        {
+            _dir=_dir.folders[_path[b]]
+        }
+        }
     }
-  }
   return _dir
 }
 
@@ -355,7 +360,7 @@ async function msDownload( _path, callback)
         else
         {
             // console.log( res.data)
-            console.log('DONE')
+            console.log('MSDownload concluded')
             callback("400","")
         }
     })

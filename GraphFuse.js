@@ -49,8 +49,9 @@ function startMount()
     force: true,
     readdir: async function (path, cb) {
       console.log('readdir(%s)', path)
+      // console.l
       _dir=onedrive.findDir(path, onedrive._structure)
-      
+      console.log( _dir )
       var _files=[]
       for( var b in _dir.folders)
       {
@@ -72,13 +73,13 @@ function startMount()
         _waiting=true
         onedrive.ODInterface(onedrive.buildTreeDelta,
           {nextURI: "", extra: onedrive._lastChecked.toISOString()}, function(v){ 
-            onedrive._lastChecked=new Date(); //.toISOString();
+            onedrive._lastChecked=new Date(); 
             _waiting=false
           } 
         )
       }
       var _dir=onedrive.findDir( path, onedrive._structure)
-          
+        // console.log( _dir )
       var _file=path.split('/').pop()
       if (path === '/') {
         cb(0, {
@@ -103,6 +104,8 @@ function startMount()
       }
       else if( _file in _dir.folders)
       {
+        console.log("This is folder")
+
         cb(0, _dir.folders[_file])
         return
       }
@@ -174,7 +177,7 @@ function startMount()
 
       if( "startSaving" in _fileToUpload && _fileToUpload.startSaving==0){
         _fileToUpload.startSaving=1
-        console.log("START SAVING ", new Date())
+        console.log("Saving on cloud ", new Date())
         await onedrive.ODInterface(onedrive.msUploadFile, {path:path.substring(1), tpmName: _fileToUpload.tmpName, size: _fileToUpload.size} ,function (msg) {
           console.log( "Msg Uploaded",msg)
           db.run('DELETE FROM toupload WHERE path=?',[path], function(err) {
@@ -183,6 +186,7 @@ function startMount()
               console.log("Cannot delete ", err.message)
             }
             else {
+              console.log("Unlink ",_fileToUpload.tmpName)
               fs.unlink(_fileToUpload.tmpName,(err=>{
                 if( err) console.log( err)
                 else {
@@ -315,6 +319,12 @@ function startMount()
   })
   
   process.on('SIGINT', function () {
+    db.close((err) => {
+      if (err) {
+          return console.error(err.message);
+      }
+      console.log('Close the database connection.');
+    });
     fuse.unmount(getConfig.mountPath, function (err) {
       if (err) {
         console.log('filesystem at ' + getConfig.mountPath + ' not unmounted', err)
@@ -322,12 +332,7 @@ function startMount()
         console.log('filesystem at ' + getConfig.mountPath + ' unmounted')
       }
     });
-    db.close((err) => {
-      if (err) {
-          return console.error(err.message);
-      }
-      console.log('Close the database connection.');
-  });
+    
 
   })
 }
