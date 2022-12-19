@@ -8,5 +8,6 @@ module.exports = {
     msAuth: "/common/oauth2/V2.0/",
     msToken: "/common/oauth2/V2.0/token",
     cacheDir: "cache/",
+    mountPath: process.platform !== 'win32' ? './mnt' : 'M:\\', 
     debug: false
   };

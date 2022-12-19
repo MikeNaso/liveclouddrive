@@ -16,7 +16,7 @@ const getConfig = require("./config.js");
 //   }
 // });
 
-var mountPath = process.platform !== 'win32' ? './mnt' : 'M:\\'
+// var mountPath = process.platform !== 'win32' ? './mnt' : 'M:\\'
 _fileToUpload={}
 // _fileToUpload={size: 0, fileRef:null, buffer:[], tmpName:null}
 // Load the tree
@@ -32,7 +32,7 @@ function startMount()
   _dir=onedrive._structure
   _waiting=false
 
-  fuse.mount(mountPath, {
+  fuse.mount(getConfig.mountPath, {
     // Force Umount
     force: true,
     readdir: async function (path, cb) {
