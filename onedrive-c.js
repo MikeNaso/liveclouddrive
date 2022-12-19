@@ -136,7 +136,7 @@ async function msUploadBySession( uri, posFrom, posTo, fullbuf, callback)
         // responseType: 'stream',
     }).
     then( (res)=>{
-        console.log("SPEDITO ",posFrom)
+        console.log("Sent ",posFrom)
         
         if( 'nextExpectedRanges' in res.data)
         {
