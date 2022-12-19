@@ -28,3 +28,5 @@ This is the autorisations
 
 
 **Please don't use in any production**
+
+If file exists you should wait 15 seconds if replaced before closing the app

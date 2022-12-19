@@ -83,7 +83,10 @@ function startMount()
       }
       else if( _file in _dir.files)
       { 
-        cb(0, _dir.files[_file])
+        // console.log(_dir.files[_file])
+        //cb(0, _dir.files[_file])
+        cb(null, _dir.files[_file])
+
         return
       }
       else if( _file in _dir.folders)
@@ -107,7 +110,14 @@ function startMount()
       cb(0, 42) // 42 is an fd
     },
     truncate: function (path, size, cb) {
-      console.log("Truncate")
+      console.log("Truncate ",path, size)
+      var _dir=onedrive.findDir( path, onedrive._structure)
+      var _file=path.split('/').pop()
+      if (_file in _dir.files)
+      {
+        _dir.files[_file].size=0
+      }
+      // SET THE FILE TO 0 SIZE or remove it to decide
       cb(0)
     },
     chmod: function(path, mode, cb)
@@ -145,15 +155,17 @@ function startMount()
       cb(0)
     },
     release: async function (path, fd, cb) {
-      console.log( "Release ",path)
+      console.log( "Release ",path, new Date())
+      // Called agter read or write finish
       // var buf=Buffer.concat(_fileToUpload.buffer)
       _fileToUpload.fileRef.end()
 
-      if( _fileToUpload.startSaving==0){
+      if( "startSaving" in _fileToUpload && _fileToUpload.startSaving==0){
         _fileToUpload.startSaving=1
-        
+        console.log("START SAVING ", new Date())
         await onedrive.ODInterface(onedrive.msUploadFile, {path:path.substring(1), tpmName: _fileToUpload.tmpName, size: _fileToUpload.size} ,function (msg) {
           console.log( "Msg Uploaded",msg)
+          _fileToUpload={}
           // remove for the db and delete tmp file
       } )}
       cb(0)
@@ -174,7 +186,15 @@ function startMount()
     },
     fsync: function(path, fd, datasync, cb)
     {
-      console.log('Fsync')
+      console.log('Fsync', path, datasync)
+      _dir=onedrive.findDir(path, onedrive._structure)
+      _file=path.split('/').pop()
+      // msUnlink
+      if( _file in _dir.files)
+      {
+        _dir.files[_file].mtime= new Date();
+      }
+
       cb(0)
     },
 
@@ -201,17 +221,19 @@ function startMount()
       else {
         // console.log(pos)
         _fileToUpload.fileRef.write(Buffer.from(buf))
+        console.log("Confirm",len)
         cb(len)
       }
       // console.log( Buffer.from(buf) )
       // _fileToUpload.buffer.push(Buffer.from(buf))
       _fileToUpload.fileRef.on('open', async () => {
         _fileToUpload.fileRef.write(Buffer.from(buf))
+        console.log("Confirm",len)
         cb(len)
       });
 
       _fileToUpload.size+=len
-      
+      console.log("END Write")
     },
     read: async function (path, fd, buf, len, pos, cb) {
       console.log('read(%s, %d, %d, %d)', path, fd, len, pos)
