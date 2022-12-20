@@ -65,7 +65,7 @@ function findDir( path, _struct, showPartial=true )
     _path=path.split('/')
     _path.shift()
     _dir=_struct
-    console.log("Path",_path)
+    // console.log("Path",_path)
     for( var b in _path)
     {
         if( _path[b]!='' )
@@ -568,6 +568,7 @@ module.exports = {
     msUploadBySession,
     msUnlink,
     msUploadFile,
+    Folder,
     // getStream,
     _elementById,
     _structure,
