@@ -9,7 +9,7 @@ const http = require('http');
 async function getToken( callback )
 {
     var tokens={}
-    await fs.access("store_tokens.json", fs.F_OK, (err) => {
+    await fs.access("store_tokens.json", fs.F_OK, async (err) => {
         if (err || tokens.access_token=='') {
             tokens = JSON.stringify({access_token: "", refresh_token: ""});
             fs.writeFileSync("store_tokens.json",tokens)
@@ -20,7 +20,7 @@ async function getToken( callback )
         var rawdata= fs.readFileSync('store_tokens.json')
         tokens = JSON.parse(rawdata);
         // Here we should change using the timestamp and the expiration time to doit only if needed
-        refreshToken( tokens, callback )
+        await refreshToken( tokens, callback )
       })
 }
 

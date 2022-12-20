@@ -3,7 +3,7 @@ var onedrive=require('./onedrive-c')
 const fs=require('fs')
 const sqlite3 = require('sqlite3')
 const getConfig = require("./config.js");
-require('console-stamp')(console, '[HH:MM:ss.l]');
+require('console-stamp')(console, 'HH:MM:ss.l');
 
 let db = new sqlite3.Database("livedrivecloud.db");
 db.run("CREATE TABLE IF NOT EXISTS toupload( path TEXT NOT NULL primary key, tmpfile TEXT NOT NULL, superseeded INT DEFAULT 0)")
@@ -17,6 +17,16 @@ onedrive.ODInterface(onedrive.buildTreeDelta,
   } 
 )
 
+function refreshTree(cb)
+{
+  console.log("Refresh Tree")
+  onedrive.ODInterface(onedrive.buildTreeDelta,
+    {nextURI: "", extra: onedrive._lastChecked.toISOString()}, (err)=>{ 
+      onedrive._lastChecked=new Date(); 
+      cb(0)
+    } 
+  )
+}
 function startMount()
 {
   _dir=onedrive._structure
@@ -53,7 +63,7 @@ function startMount()
       console.log('readdir(%s)', path)
       // console.l
       _dir=onedrive.findDir(path, onedrive._structure, true)
-      // console.log( _dir )
+      console.log( _dir )
       var _files=[]
       for( var b in _dir.folders)
         _files.push(_dir.folders[b]['name'])
@@ -70,12 +80,9 @@ function startMount()
       if( (_dt.getTime()-onedrive._lastChecked.getTime())>15000 && !_waiting)
       {
         _waiting=true
-        onedrive.ODInterface(onedrive.buildTreeDelta,
-          {nextURI: "", extra: onedrive._lastChecked.toISOString()}, function(v){ 
-            onedrive._lastChecked=new Date(); 
-            _waiting=false
-          } 
-        )
+        refreshTree((msg)=>{
+        
+        })
       }
       var _dir=onedrive.findDir( path, onedrive._structure, true)
         // console.log( _dir )
@@ -100,6 +107,8 @@ function startMount()
       }
       else if( _file in _dir.folders)
       {
+        // console.log("Is a Folder")
+        // console.log( _dir.folders[_file])
         cb(0, _dir.folders[_file])
         return
       }
@@ -173,7 +182,8 @@ function startMount()
           _fileToUpload.startSaving=1
           console.log("Saving on cloud ")
           await onedrive.ODInterface(onedrive.msUploadFile, {path:path.substring(1), tpmName: _fileToUpload.tmpName, size: _fileToUpload.size} ,function (msg) {
-            console.log( "Msg Uploaded",msg)
+            console.log( "Msg Uploaded",msg);
+            refreshTree( (msg) => {});
             db.run('DELETE FROM toupload WHERE path=?',[path], function(err) {
               if( err)
                 console.log("Cannot delete ", err.message)
@@ -200,6 +210,8 @@ function startMount()
         console.log( _dir.files[_file]['id'])
         onedrive.ODInterface(onedrive.msUnlink, {itemId: _dir.files[_file]['id'] } , (info, response) =>{
           console.log(r)
+          delete _dir.files[_file]
+          refreshTree( (msg) => {})
           cb(0)
         })
       }
@@ -218,7 +230,10 @@ function startMount()
 
       cb(0)
     },
-
+    rename: function(src, dest, cb){
+      console.log("Rename %s => %s",src,dest)
+      cb(0)
+    },
     write: async function(path, fd, buf, len, pos, cb){
       console.log('writing %s Len %s Pos %s ', path, len, pos)
 
