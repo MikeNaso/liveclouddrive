@@ -215,21 +215,16 @@ async function msCreateSession(opts, callback)
     })
 }
 
-async function msUnlink( _itemId, callback)
+async function msUnlink( opts, callback)
 {
-    var tokens ={}
-    await ms.getStoredToken( function( _token ){
-        tokens=_token
-    })
-  
-    console.log("msUnlink "+_itemId)
+    console.log("msUnlink")
     // console.log( mycontent )
     await axios.request({
-        url: `me/drive/items/${ _itemId }`,
+        url: `me/drive/items/${ opts.itemId }`,
         baseURL: getConfig.apiUrl,
         method: 'DELETE',
         headers: { 
-            Authorization: "Bearer "+tokens.access_token,
+            Authorization: "Bearer "+opts.tokens.access_token,
             "Content-Type": "application/json"
         }
     })
@@ -237,7 +232,7 @@ async function msUnlink( _itemId, callback)
         callback( 204 )
     })
     .catch( (err)=>{
-        console.log( err )
+        callback( 400 )
     })
 }
 

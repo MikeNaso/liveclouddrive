@@ -198,11 +198,12 @@ function startMount()
       if( _file in _dir.files)
       {
         console.log( _dir.files[_file]['id'])
-        await onedrive.msUnlink( _dir.files[_file]['id'], function(r){
+        onedrive.ODInterface(onedrive.msUnlink, {itemId: _dir.files[_file]['id'] } , (info, response) =>{
           console.log(r)
+          cb(0)
         })
       }
-      cb(0)
+      
     },
     fsync: function(path, fd, datasync, cb)
     {
@@ -277,11 +278,9 @@ function startMount()
           var _pos=pos+'-'+(len+pos-1)
           console.log( _pos)
           onedrive.ODInterface(onedrive.msDownloadPartial, {uri:response, range: _pos } ,function (info, response) {
-                // console.log( response.length);
-                // console.log( '===========> Info '+info );
+
                 if( info==200)
                 {
-                  // _response=response;
                   var part=response.slice( 0, len)
                   part.copy(buf)
                   return cb(part.length)
@@ -293,32 +292,6 @@ function startMount()
   
         // console.log('AB')
       });
-      console.log("QUI")
-      // return cb(0)
-      // await onedrive.msDownload(path,function(info, response){ 
-      //   console.log( 'INFO ', info)
-      //   _info=info
-      //   if( info==200)
-      //     _link=response
-      // })
-      // if( _info!=200)
-      //   return cb(0)
-      // if( _link!='')
-      // {
-      //   await onedrive.msDownloadPartial(_link, pos+'-'+(len+pos)
-      //   , function(info, response){
-      //       console.log( response.length);
-      //       console.log( '===========> Info '+info );
-      //       if( info==200)
-      //         _response=response;
-      //       else 
-      //         return cb(0);
-      //   })
-      // }
-      // console.log( "Size "+_response.length)
-      // var part=_response.slice( pos, pos+len)
-      // part.copy(buf)
-      // return cb(part.length) //_response.length)
     }
   }, function (err) {
     if (err) throw err
