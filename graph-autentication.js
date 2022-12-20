@@ -55,7 +55,6 @@ async function readToken(code)
         // console.log( err)
         // This should be modify
         // authorize()
-
     })
 }
 

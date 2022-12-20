@@ -50,9 +50,10 @@ let _structure=new Folder('/')
 let _elementById=[]
 let _lastChecked=new Date() //.toISOString()
 
-function findDir( path, _struct )
+function findDir( path, _struct, showPartial=true )
 {
-    console.log("FindDir ", path)
+    _notFound=false
+    // console.log("FindDir ", path)
     _path=path.split('/')
 
     _dir=_struct
@@ -63,6 +64,12 @@ function findDir( path, _struct )
         {
             if(_path[b] in _dir.folders)
                 _dir=_dir.folders[_path[b]]
+        }
+        else
+        {
+            // console.log("NOT FOUND!!!! "+_path[b])
+            _notFound=true
+            break;
         }
     }
   return _dir
@@ -84,12 +91,9 @@ async function msUploadFile(opts, cb)
             var buf=Buffer.concat(data)
             var _to=0;
             if( buf.length>65536)
-            {
                 _to=65536
-            }
-            else{
+            else
                 _to=buf.length
-            }
             msUploadBySession( url, 0, _to, buf, function(r){
                 if( r.status==200 || r.status==202)
                 {
@@ -149,7 +153,6 @@ async function msUploadBySession( uri, posFrom, posTo, fullbuf, callback)
         else console.log( err)
         callback("ERRO")
     })
-
 }
 
 
@@ -206,7 +209,6 @@ async function msCreateSession(opts, callback)
         console.log( err )
         console.log( err.response.status )
         console.log( err.response.data )
-        
         console.log("---==---")
         // console.log( err )
 
@@ -239,7 +241,7 @@ async function msUnlink( _itemId, callback)
     })
 }
 
-async function msDownloadPartial( _uri, _range, callback)
+async function msDownloadPartial1( _uri, _range, callback)
 {
         if( _range!='') 
             _body={headers: {Range: 'bytes='+_range},responseType: 'arraybuffer'}
@@ -255,7 +257,100 @@ async function msDownloadPartial( _uri, _range, callback)
         })
 }
 
-async function msDownload( _path, callback)
+async function msDownloadPartial( opts, callback)
+{
+    console.log("msDownloadPartial ");
+    if( opts.range!='') 
+        _body={headers: {Range: 'bytes='+opts.range},responseType: 'arraybuffer'}
+
+    console.log( "Range ",opts.range)
+    await axios.get(opts.uri, _body)
+    .then( 
+        (res) => { 
+            // console.log( res.data)
+            callback('200',res.data)
+        }
+    )
+    .catch ( (err) =>{
+        callback('400','Sd')
+    })
+}
+
+async function msDownload( opts, callback)
+{
+    _paths=opts.path.split('/')
+    _file=_paths.pop()
+    _dir=_structure
+    _notFound=false
+    _itemId=''
+    for( var b in _paths)
+    {
+      if(b==0)
+      {
+        continue
+      }
+      if( _paths[b]!='' )
+      {
+        if(_paths[b] in _dir.folders)
+        {
+          _dir=_dir.folders[_paths[b]]
+        }
+        else{
+          console.log("NOT FOUND!!!! "+_paths[b])
+          _notFound=true
+          break;
+        }
+      }
+    }
+    if( ! _notFound)
+    {
+        // console.log( _dir.files[_file])
+        if( _file in _dir.files)
+        {
+            if( 'new' in _dir.files[_file] )
+            {
+                return callback(404,'')
+            }
+            _itemId=_dir.files[_file]['id']
+        }
+    }
+    else 
+        console.log( _dir)
+    
+    // var tokens=ms.getStoredToken()
+    _URI=getConfig.apiUrl+'me/drive/items/'+_itemId+'?select=id,@microsoft.graph.downloadUrl'
+    await axios.get(_URI, {    
+        responseType: "json",
+        headers: {"Authorization": "Bearer "+opts.tokens.access_token}
+    })
+    .then( (res) =>{
+        if( '@microsoft.graph.downloadUrl' in res.data)
+            callback('200', res.data['@microsoft.graph.downloadUrl'])
+        else
+        {
+            console.log('MSDownload concluded')
+            callback("400","")
+        }
+    })
+    .catch( (err)=>{
+        if( err.response==401)
+        {
+            console.log("*********** RENEW TOKEN!!!!!") 
+            // ms.refreshToken(function(a){
+            //     console.log("Refreshed")
+            // })
+            // _retries++;
+        }
+        else
+            console.log( err);
+        
+        callback(err.response,'')
+        // console.log(err.code)
+    })
+    // return response
+}
+
+async function msDownload1( _path, callback)
 {
     _paths=_path.split('/')
     _file=_paths.pop()
@@ -276,12 +371,10 @@ async function msDownload( _path, callback)
         }
         else{
           console.log("NOT FOUND!!!! "+_paths[b])
-          // console.log( _dir)
           _notFound=true
           break;
         }
       }
-    //   if 
     }
     if( ! _notFound)
     {
@@ -317,17 +410,14 @@ async function msDownload( _path, callback)
         if( err.response==401)
         {
             console.log("*********** RENEW TOKEN!!!!!") 
-            if (_retries<2) {
-                ms.refreshToken(function(a){
-                    console.log("Refreshed")
-                })
-            }
-            _retries++;
+            // ms.refreshToken(function(a){
+            //     console.log("Refreshed")
+            // })
+            // _retries++;
         }
-        else{
-            console.log( err)
-
-        }
+        else
+            console.log( err);
+        
         callback(err.response,'')
         // console.log(err.code)
     })
@@ -419,7 +509,6 @@ async function buildTreeDelta( opts, callback )
                         _elementById[res.data.value[i]['id']].size=res.data.value[i]['size']
                         _elementById[res.data.value[i]['id']].mtime= new Date(res.data.value[i]['fileSystemInfo']['lastModifiedDateTime']);
                     }
-
                 }
                 else {
                     _dir.files[res.data.value[i]['name']]=new File(res.data.value[i])
@@ -462,8 +551,6 @@ async function ODInterface(callf, opts, cb )
         
     })
     // callf(opts, cb)
-
-
 }
 
 module.exports = {

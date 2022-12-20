@@ -52,8 +52,8 @@ function startMount()
     readdir: async function (path, cb) {
       console.log('readdir(%s)', path)
       // console.l
-      _dir=onedrive.findDir(path, onedrive._structure)
-      console.log( _dir )
+      _dir=onedrive.findDir(path, onedrive._structure, true)
+      // console.log( _dir )
       var _files=[]
       for( var b in _dir.folders)
         _files.push(_dir.folders[b]['name'])
@@ -77,7 +77,7 @@ function startMount()
           } 
         )
       }
-      var _dir=onedrive.findDir( path, onedrive._structure)
+      var _dir=onedrive.findDir( path, onedrive._structure, true)
         // console.log( _dir )
       var _file=path.split('/').pop()
       if (path === '/') {
@@ -118,7 +118,7 @@ function startMount()
     },
     truncate: function (path, size, cb) {
       console.log("Truncate ",path, size)
-      var _dir=onedrive.findDir( path, onedrive._structure)
+      var _dir=onedrive.findDir( path, onedrive._structure, true)
       var _file=path.split('/').pop()
       if (_file in _dir.files)
         _dir.files[_file].size=0
@@ -134,7 +134,7 @@ function startMount()
     create: function (path, flags, cb) {
       // created = true
       console.log('Create %s Flag %s', path, flags)
-      var _dir=onedrive.findDir( path, onedrive._structure)
+      var _dir=onedrive.findDir( path, onedrive._structure, true)
       if( flags=33188)
       {
         var _name=path.split('/').pop()
@@ -164,32 +164,36 @@ function startMount()
       console.log( "Release ",path)
       // Called agter read or write finish
       // var buf=Buffer.concat(_fileToUpload.buffer)
-      _fileToUpload.fileRef.end()
+      if(  'fileRef' in _fileToUpload )
+      {
 
-      if( "startSaving" in _fileToUpload && _fileToUpload.startSaving==0){
-        _fileToUpload.startSaving=1
-        console.log("Saving on cloud ")
-        await onedrive.ODInterface(onedrive.msUploadFile, {path:path.substring(1), tpmName: _fileToUpload.tmpName, size: _fileToUpload.size} ,function (msg) {
-          console.log( "Msg Uploaded",msg)
-          db.run('DELETE FROM toupload WHERE path=?',[path], function(err) {
-            if( err)
-              console.log("Cannot delete ", err.message)
-            else {
-              console.log("Unlink ",_fileToUpload.tmpName)
-              fs.unlink(_fileToUpload.tmpName,(err=>{
-                if( err) console.log( err)
-                else 
-                  _fileToUpload={}
-              }))
-            }
-          }) 
-          // remove for the db and delete tmp file
-      } )}
+        _fileToUpload.fileRef.end()
+
+        if( "startSaving" in _fileToUpload && _fileToUpload.startSaving==0){
+          _fileToUpload.startSaving=1
+          console.log("Saving on cloud ")
+          await onedrive.ODInterface(onedrive.msUploadFile, {path:path.substring(1), tpmName: _fileToUpload.tmpName, size: _fileToUpload.size} ,function (msg) {
+            console.log( "Msg Uploaded",msg)
+            db.run('DELETE FROM toupload WHERE path=?',[path], function(err) {
+              if( err)
+                console.log("Cannot delete ", err.message)
+              else {
+                console.log("Unlink ",_fileToUpload.tmpName)
+                fs.unlink(_fileToUpload.tmpName,(err=>{
+                  if( err) console.log( err);
+                  else 
+                    _fileToUpload={}
+                }))
+              }
+            }) 
+            // remove for the db and delete tmp file
+        } )}
+      }
       cb(0)
     },
     unlink: async function(path, cb) {
       console.log('Unlink '+path)
-      _dir=onedrive.findDir(path, onedrive._structure)
+      _dir=onedrive.findDir(path, onedrive._structure, true)
       _file=path.split('/').pop()
       if( _file in _dir.files)
       {
@@ -203,7 +207,7 @@ function startMount()
     fsync: function(path, fd, datasync, cb)
     {
       console.log('Fsync', path, datasync)
-      _dir=onedrive.findDir(path, onedrive._structure)
+      _dir=onedrive.findDir(path, onedrive._structure,true)
       _file=path.split('/').pop()
       // msUnlink
       if( _file in _dir.files)
@@ -242,20 +246,18 @@ function startMount()
         console.log("Confirm",len)
         cb(len)
       }
-      // console.log( Buffer.from(buf) )
-      // _fileToUpload.buffer.push(Buffer.from(buf))
+
       _fileToUpload.fileRef.on('open', async () => {
         _fileToUpload.fileRef.write(Buffer.from(buf))
         console.log("Confirm",len)
         cb(len)
       });
-
       _fileToUpload.size+=len
       console.log("END Write")
     },
     read: async function (path, fd, buf, len, pos, cb) {
-      console.log('read(%s, %d, %d, %d)', path, fd, len, pos)
-      var _dir=onedrive.findDir( path, onedrive._structure)
+      console.log('read(%s Pos %d Len %d)', path, pos,len)
+      var _dir=onedrive.findDir( path, onedrive._structure, true)
       _file=path.split('/').pop()
       if( _file in _dir.files && 'new' in _dir.files[_file])
       {
@@ -266,42 +268,67 @@ function startMount()
       var _response=''
       var _link=''
       var _info=0
-      await onedrive.msDownload(path,function(info, response){ 
+
+      await onedrive.ODInterface(onedrive.msDownload, {path:path} ,function (info, response) {
         console.log( 'INFO ', info)
         _info=info
-        if( info==200)
-          _link=response
-      })
-      if( _info!=200)
-        return cb(0)
-      if( _link!='')
-      {
-        await onedrive.msDownloadPartial(_link, pos+'-'+(len+pos)
-        , function(info, response){
-            console.log( response.length)
-            console.log( '===========> Info '+info )
-            if( info==200)
-              _response=response
-            else 
-              return cb(0)
-        })
-      }
-
+        if( info==200 && response!='')
+        {
+          var _pos=pos+'-'+(len+pos-1)
+          console.log( _pos)
+          onedrive.ODInterface(onedrive.msDownloadPartial, {uri:response, range: _pos } ,function (info, response) {
+                // console.log( response.length);
+                // console.log( '===========> Info '+info );
+                if( info==200)
+                {
+                  // _response=response;
+                  var part=response.slice( 0, len)
+                  part.copy(buf)
+                  return cb(part.length)
+                }
+                else 
+                  return cb(0);
+            })
+        }
+  
+        // console.log('AB')
+      });
+      console.log("QUI")
+      // return cb(0)
+      // await onedrive.msDownload(path,function(info, response){ 
+      //   console.log( 'INFO ', info)
+      //   _info=info
+      //   if( info==200)
+      //     _link=response
+      // })
+      // if( _info!=200)
+      //   return cb(0)
+      // if( _link!='')
+      // {
+      //   await onedrive.msDownloadPartial(_link, pos+'-'+(len+pos)
+      //   , function(info, response){
+      //       console.log( response.length);
+      //       console.log( '===========> Info '+info );
+      //       if( info==200)
+      //         _response=response;
+      //       else 
+      //         return cb(0);
+      //   })
+      // }
       // console.log( "Size "+_response.length)
-      var part=_response.slice( pos, pos+len)
-      part.copy(buf)
-      return cb(part.length) //_response.length)
+      // var part=_response.slice( pos, pos+len)
+      // part.copy(buf)
+      // return cb(part.length) //_response.length)
     }
   }, function (err) {
     if (err) throw err
-    console.log('filesystem mounted on ' + getConfig.mountPath)
+    console.log('filesystem mounted on ' + getConfig.mountPath);
   })
   
   process.on('SIGINT', function () {
     db.close((err) => {
-      if (err) {
+      if (err) 
           return console.error(err.message);
-      }
       console.log('Close the database connection.');
     });
     fuse.unmount(getConfig.mountPath, function (err) {
@@ -311,7 +338,5 @@ function startMount()
         console.log('filesystem at ' + getConfig.mountPath + ' unmounted')
       }
     });
-    
-
   })
 }
