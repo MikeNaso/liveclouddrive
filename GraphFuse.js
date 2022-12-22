@@ -61,7 +61,6 @@ function startMount()
     force: true,
     readdir: async function (path, cb) {
       console.log('readdir(%s)', path);
-      // console.l
       _dir=onedrive.findDir(path, onedrive._structure, true);
       console.log( _dir );
       var _files=[];
@@ -87,16 +86,6 @@ function startMount()
       var _file=path.split('/').pop();
       if (path === '/') {
         cb(0, new onedrive.Folder(''))
-        //   {
-        //   mtime: new Date(),
-        //   atime: new Date(),
-        //   ctime: new Date(),
-        //   nlink: 1,
-        //   size: 100,
-        //   mode: 16877,
-        //   uid: process.getuid ? process.getuid() : 0,
-        //   gid: process.getgid ? process.getgid() : 0
-        // })
         return
       }
       else if( _file in _dir.files)
@@ -135,20 +124,8 @@ function startMount()
       if( flags=33188)
       {
         var _name=path.split('/').pop();
-        console.log( _name );
+        // console.log( _name );
         _dir.files[_name]=new onedrive.Folder(_name);
-        // {
-        //   name: _name,
-        //   new: 1,
-        //   mtime: new Date(),
-        //   atime: new Date(),
-        //   ctime: new Date(),
-        //   nlink: 1,
-        //   size: 0,
-        //   mode: 33188,
-        //   uid: process.getuid ? process.getuid() : 0,
-        //   gid: process.getgid ? process.getgid() : 0
-        // }
       }
       _fileToUpload={size: 0, fileRef:null, buffer:[], tmpName:null, db: null};
       created = true;

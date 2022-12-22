@@ -8,20 +8,25 @@ const http = require('http');
 
 async function getToken( callback )
 {
+    console.log("GetToken");
     var tokens={}
-    await fs.access("store_tokens.json", fs.F_OK, async (err) => {
-        if (err || tokens.access_token=='') {
+    if( fs.accessSync("store_tokens.json", fs.F_OK) )
+    {
+    // ,  (err) => {
+        // console.log("Store")
+        // if (err || tokens.access_token=='') {
             tokens = JSON.stringify({access_token: "", refresh_token: ""});
             fs.writeFileSync("store_tokens.json",tokens)
             authorize( callback )
             console.error(err)
             return
-        }
-        var rawdata= fs.readFileSync('store_tokens.json')
-        tokens = JSON.parse(rawdata);
-        // Here we should change using the timestamp and the expiration time to doit only if needed
-        await refreshToken( tokens, callback )
-      })
+    }
+    var rawdata= fs.readFileSync('store_tokens.json')
+    tokens = JSON.parse(rawdata);
+    // Here we should change using the timestamp and the expiration time to doit only if needed
+    console.log("Pre Refreshtoken")
+    await refreshToken( tokens, callback )
+    //   })
 }
 
 async function readToken(code)
@@ -38,9 +43,7 @@ async function readToken(code)
             client_id: getConfig.client_id,
             client_secret: getConfig.client_secret,
         },
-        headers: { 
-            'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded'}
     })
     .then((res)=>{
         console.log("SAVE")
@@ -62,7 +65,7 @@ async function refreshToken(tokens, callback)
 {
     console.log( "Refresh Token")
 
-    axios.request({
+    await axios.request({
         url: getConfig.msAuth+'Token',
         baseURL:  getConfig.baseAuthUrl,
         method: 'post',
@@ -79,6 +82,7 @@ async function refreshToken(tokens, callback)
     }).then( (response)=>{
         if( 200==response.request.res.statusCode)
         {
+            // console.log( "D")
             let obj = {access_token: response.data.access_token, refresh_token: response.data.refresh_token}
             let tokens = JSON.stringify( obj );
             fs.writeFileSync("store_tokens.json",tokens)

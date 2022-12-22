@@ -1,9 +1,7 @@
 const getConfig = require("./config.js");
 const fs=require('fs')
 const ms=require('./graph-autentication')
-// const { dir } = require("console");
 const axios=require('axios')
-// const FormData = require('form-data');
 const { Interface } = require("readline");
 
 var _retries=0
@@ -16,12 +14,9 @@ class Folder {
     constructor(_value) {
         var value={}
         if( typeof(_value)!=="object")
-        {
             value={name: _value, size:0, id:-1, fileSystemInfo:{lastModifiedDateTime: new Date(),createdDateTime: new Date()}}
-        }
         else
             value=_value
-        // console.log( value )
       this.name = value['name'];
       this.folders = [];
       this.files=[];
@@ -339,9 +334,6 @@ async function msDownload( opts, callback)
     // return response
 }
 
-
-
-// async function buildTreeDelta( _nextURI='', _extra='', callback )
 async function buildTreeDelta( opts, callback )
 {
     console.log( 'Build tree')
@@ -353,94 +345,55 @@ async function buildTreeDelta( opts, callback )
             opts.nextURI+='?token='+encodeURI(opts.extra)
     }
 
-    await axios.get(opts.nextURI, 
-    {    
+    await axios.request(
+    {   
+        method:'get',
+        url: opts.nextURI, 
         responseType: "json",
         headers: {"Authorization": "Bearer "+opts.tokens.access_token}
     })
-    .then((res)=>{ 
-        var _list=[]
-        _nextLink=''
+    .then(  async (res)=>{ 
+        var _list=[];
+        _nextLink='';
         if( "@odata.nextLink" in res.data)
-        {
-            _nextLink=res.data['@odata.nextLink']
-        }
+            _nextLink=res.data['@odata.nextLink'];
         for( var i in res.data.value )
         {
-            if( res.data.value[i]['parentReference']['path']===undefined){
+            if( res.data.value[i]['parentReference']['path']===undefined)
                 continue
-            }
-            // console.log( res.data.value[i])
-            // var _ele=null
-            // if( res.data.value[i]['folder'] )
-            //     _ele=new Folder(res.data.value[i])
-            // else
-            //     _ele=new File(res.data.value[i])
-            // var _ele={
-            //     name: res.data.value[i]['name'],
-            //     time: new Date(),
-            //     atime: new Date(),
-            //     mtime: new Date(res.data.value[i]['fileSystemInfo']['lastModifiedDateTime']),
-            //     ctime: new Date(res.data.value[i]['fileSystemInfo']['createdDateTime']),
-            //     nlink: 1,
-            //     size: res.data.value[i]['size'],
-            //     mode: (res.data.value[i]['folder']?16877:33188),
-            //     uid: process.getuid ? process.getuid() : 0,
-            //     gid: process.getgid ? process.getgid() : 0,
-            //     id: res.data.value[i]['id'],
-            //     folders: []
-            // }
-            // console.log( _ele)
             
             _path=res.data.value[i]['parentReference']['path'].split(':')
             _path=_path[1].split('/')
 
             _dir=_structure
+            _path.shift()
             for( var p in _path)
             {
-                // r='/'
-                if( p==0)
-                    continue
+                // // r='/'
+                // if( p==0)
+                //     continue
                 r=_path[p]
                 if( r in _dir.folders)
-                {
                     _dir=_dir.folders[r]
-                }
                 else{
-                    // console.log( r )
                     _dir.folders[r]=new Folder(r)
-                    // console.log( _dir.folders[r] )
                     _dir=_dir.folders[r]
                 }
             }
-            // if( 'folder' in res.data.value[i] ){
-            //     console.log("FOLDER ", res.data.value[i]['name'])
-            //     console.log( _dir )
-            //     // console.log( _dir.folders[res.data.value[i]['name']] )
-            //     // console.log("FOLDER")
-            // }
-            // else 
             if( 'folder' in res.data.value[i])
             {
-                // console.log('Folder ',res.data.value[i]['name'])
-                // console.log( _dir )
                 if( res.data.value[i]['name'] in _dir.folders )
                 {
-                    // console.log("FOUND!")
-                    _f=_dir.folders[res.data.value[i]['name']]
-                    _f.size=res.data.value[i]['size']
-                    _f.id=res.data.value[i]['id']
+                    _f=_dir.folders[res.data.value[i]['name']];
+                    _f.size=res.data.value[i]['size'];
+                    _f.id=res.data.value[i]['id'];
                 }
                 else
-                {
-                    // console.log('ADD')
-                    _dir.folders[res.data.value[i]['name']]=new Folder(res.data.value[i])
-                }
+                    _dir.folders[res.data.value[i]['name']]=new Folder(res.data.value[i]);
                 
-                // console.log( _dir )
             }
             if( 'deleted'  in  res.data.value[i] ){
-                console.log( "EEEECCCC "+ res.data.value[i] )
+                console.log( "Deleted you should remove it "+ res.data.value[i] )
             }
             else if( 'file' in  res.data.value[i])
             {
@@ -453,42 +406,40 @@ async function buildTreeDelta( opts, callback )
                         if( _elementById[res.data.value[i]['id']]['name'] in _dir.files)
                         {
                             _name=_elementById[res.data.value[i]['id']]['name'];
-                            delete _dir.files[_name]
-                            _elementById[res.data.value[i]['id']].name=res.data.value[i]['name']
+                            delete _dir.files[_name];
+                            _elementById[res.data.value[i]['id']].name=res.data.value[i]['name'];
                             _dir.files[res.data.value[i]['name']]=_elementById[res.data.value[i]['id']];
                         }
-                        _elementById[res.data.value[i]['id']].size=res.data.value[i]['size']
+                        _elementById[res.data.value[i]['id']].size=res.data.value[i]['size'];
                         _elementById[res.data.value[i]['id']].mtime= new Date(res.data.value[i]['fileSystemInfo']['lastModifiedDateTime']);
                     }
                 }
                 else {
-                    _dir.files[res.data.value[i]['name']]=new File(res.data.value[i])
-                    _elementById[res.data.value[i]['id']]=_dir.files[res.data.value[i]['name']]
+                    _dir.files[res.data.value[i]['name']]=new File(res.data.value[i]);
+                    _elementById[res.data.value[i]['id']]=_dir.files[res.data.value[i]['name']];
                 }
             }
             else if( 'folders')
-            {
-                _elementById[res.data.value[i]['id']]=_dir.files[res.data.value[i]['name']]
-                // console.log( res.data.value[i]['name'])
-            }
+                _elementById[res.data.value[i]['id']]=_dir.files[res.data.value[i]['name']];
             
         }
         if( _nextLink!='')
         {
             opts.nextURI=_nextLink;
             opts.extra="";
-            buildTreeDelta( opts, callback )
+            // console.log("DDD")
+            await buildTreeDelta( opts, callback )
         }
         else{
             callback( 200)
         }
     }).catch( err=>{
-        console.log( err.response.status )
-        if( err.response.status==401)
+        // console.log( err.response.status )
+        if( 'response' in err && err.response.status==401)
             console.log("*********** RENEW TOKEN!!!!!") 
         else
-            console.log( err.response.data)
-        callback(err.response.status)
+            console.log( err)
+        // callback(err.response.status)
         // console.log(err.code)
     })
 }
@@ -496,8 +447,8 @@ async function buildTreeDelta( opts, callback )
 
 async function ODInterface(callf, opts, cb )
 {
-    console.log('INTERFACE')
-    await ms.getToken( async function(token){
+    console.log('Interface')
+    await ms.getToken( async (token)=>{
         opts.tokens=token;
         await callf(opts, cb);
     })
@@ -572,5 +523,5 @@ module.exports = {
     // getStream,
     _elementById,
     _structure,
-    _lastChecked,
+    _lastChecked
 }
