@@ -12,9 +12,6 @@ async function getToken( callback )
     var tokens={}
     if( fs.accessSync("store_tokens.json", fs.F_OK) )
     {
-    // ,  (err) => {
-        // console.log("Store")
-        // if (err || tokens.access_token=='') {
             tokens = JSON.stringify({access_token: "", refresh_token: ""});
             fs.writeFileSync("store_tokens.json",tokens)
             authorize( callback )

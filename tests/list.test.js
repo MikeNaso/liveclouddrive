@@ -22,8 +22,6 @@ function readTree(t)
 
 function uploadFile(t)
 {
-  // console.log( onedrive._structure)
-  // console.log("UP")
   onedrive.ODInterface(
     onedrive.msUploadFile, {tpmName: "tests/test_file.upload", path:'this_is_from_test.txt'}, (res)=>{
       console.log( res )
@@ -35,7 +33,6 @@ function uploadFile(t)
       else
         t.fail('*** Failed to upload')
     })
-    // console.log("UP2")
 }
 
 function refreshTree(t)
@@ -72,7 +69,6 @@ function moveFile(t,opts)
 tape('teardown', function(t) {
   t.plan(4)
   readTree(t)
-  // console.log("A")
 });
-// console.log("D")
+
 
