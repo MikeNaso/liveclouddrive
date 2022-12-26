@@ -6,7 +6,6 @@ const { Interface } = require("readline");
 
 var _retries=0
 const URI='https://graph.microsoft.com/v1.0/me/drive/root/children'
-//https://graph.microsoft.com/v1.0/me/drive/root/delta
 
 //https://learn.microsoft.com/en-us/graph/api/driveitem-list-children?view=graph-rest-1.0&tabs=http
 
@@ -52,6 +51,7 @@ class File {
 let _structure=new Folder('/')
 let _elementById=[]
 let _lastChecked=new Date()
+
 function findDir( path, _struct, showPartial=true ) // -1 No Looking for the right one //1 Accept any partial //2 Accept the second to last
 {
     _path=path.split('/')
@@ -60,19 +60,15 @@ function findDir( path, _struct, showPartial=true ) // -1 No Looking for the rig
     // console.log( _path.length)
     for( var b in _path)
     {
-        console.log( b, _path[b] )
+        // console.log( b, _path[b] )
         if( _path[b]!='' )
         {
             if(_path[b] in _dir.folders)
                 _dir=_dir.folders[_path[b]]
             else if(b==(_path.length-1) && showPartial===2)
-                // console.log("Found second last ",b)
                 return _dir
             else if( showPartial===-1 || showPartial===2)
-            {
-                // console.log("Missed ",b)
                 return null
-            }
         }
         else
         {
@@ -92,46 +88,39 @@ async function msUploadFile(opts, cb)
         var readStream = fs.createReadStream(opts.tpmName) 
         var data=[];
         var pos=0;
-        // var buffer=null
         readStream.on('data', function(chunk) {
             data.push( chunk);
         }).on('end', function() {
-            console.log( "END READ Stream")
-            var buf=Buffer.concat(data)
+            console.log( "END Reading Stream")
+            var buf=Buffer.concat(data);
             var _to=0;
             if( buf.length>65536)
-                _to=65536
+                _to=65536;
             else
-                _to=buf.length
+                _to=buf.length;
             msUploadBySession( url, 0, _to, buf, function(r){
                 if( r.status==200 || r.status==201 || r.status==202)
                 {
                     console.log('Upload File Done',r.status)
                     cb(r.status)
                 }
-                else {
+                else 
                     cb(r.status)
-                    // console.log('DDJDJDJDJJDJDJDJDJDJJD')
-                }
-            } )
-            // console.log(data); 
-        // here you see all data processed at end of file
+            } );
             });
 
     })
-    // Read file
-
 }
 
 async function msUploadBySession( uri, posFrom, posTo, fullbuf, callback)
 {
+    console.log( "msUploadBySession")
     var size=fullbuf.length
     var chunk=fullbuf.slice(posFrom,posTo)
-    console.log("************ Pos %s Len %s Size %s ",posFrom,posTo,size)
-    // console.log( Buffer.from(content) )
-    console.log( 'bytes ',(posFrom+'-'+(posFrom+chunk.length-1)+'/'+size) )
+    // console.log("************ Pos %s Len %s Size %s ",posFrom,posTo,size)
+    // console.log( 'bytes ',(posFrom+'-'+(posFrom+chunk.length-1)+'/'+size) )
     
-    console.log( 'Chunk size ',chunk.length)
+    // console.log( 'Chunk size ',chunk.length)
     await axios.request({
         baseURL: uri,
         method: 'put',
@@ -150,7 +139,7 @@ async function msUploadBySession( uri, posFrom, posTo, fullbuf, callback)
             nextChunk[0]=parseInt(nextChunk[0])
             nextChunk[1]=parseInt(nextChunk[1])
             msUploadBySession( uri, nextChunk[0], (nextChunk[1]+1),fullbuf, function(r){
-                console.log('DONE 1 ',r.status)
+                // console.log('DONE 1 ',r.status)
                 callback(r)
             } )
         }
@@ -159,9 +148,7 @@ async function msUploadBySession( uri, posFrom, posTo, fullbuf, callback)
     .catch( (err) =>{
         console.log( err.status)
         if( 'response' in err && 'data' in err.response)
-        {
             console.log( err.response.data)
-        }
         else console.log( err)
         callback("ERRO")
     })
@@ -180,22 +167,13 @@ async function msCreateSession(opts, callback)
             Authorization: "Bearer "+opts.tokens.access_token,
             "Content-Type": "application/json"
         },
-        // data:{item:{
-        //     "@microsoft.graph.conflictBehavior": "replace",
-        //     "description": "Uploaded by .....",
-        //     "fileSize": opts.size,
-        //     "name": opts.path
-        // }}
     })
     .then( (res) =>{
         callback(res.data.expirationDateTime,  res.data.nextExpectedRanges,res.data.uploadUrl )
     })
     .catch( (err)=>{
-        // console.log( err )
         console.log( err.response.status )
         console.log( err.response.data )
-        // console.log("---==---")
-        // console.log( err )
     })
 }
 
@@ -235,91 +213,20 @@ async function msUpdateProperties( opts, callback)
     }
     if( opts.destPath!='') {
         _path=opts.destPath.split('/')
-        // console.log("ASD")
-        // console.log(opts.destPath.substring(opts.destPath.length-1))
-        // console.log(opts.destPath.substr(-1))
-        // console.log(opts.destPath.slice(-1))
         
         var _dir=findDir(opts.destPath, _structure, (_path.at(-1)==''?-1:2));
         console.log( 'Analize DestPath ', opts.destPath)
-        // if( opts.destPath in _dir.files)
-        // {
-        //     opts.destDirId=_dir.id
-        //     opts.destName=opts.destPath.split('/').shift()
-        // }
         _path=opts.destPath.split('/')
         if( _dir ===null)
             console.log("Not found")
         else
         {
             console.log("Found something")
-            // If it is a folder
-            // if( )
-            console.log( _dir )
+            // console.log( _dir )
         }
-        // console.log( _path)
-        // if( _path.at(-1)=='' && _path.length>1)
-        //     _path.pop()
-        // var _last=_path.at(-1)
-        // if( ! _dir && _path.at(-1)=='')
-        //     console.log("Missing dir")
-        // else if( _last in _dir.folders)
-        // {
-        //     // // var _dest=''
-        //     // if( _path.at(-1)=='' )
-        //     //     _path.pop()
-        //     // var _dest=_path.at(-1)
-        //     console.log("move to a dir")
-        //     opts.destDirId=_dir.folder[opts.oriPath]
-        // }
-        // else
-        // {
-        //     console.log("Move to a file")
-        //     opts.destDirId=_dir.id
-            
-        // }
-        // _path=opts.destPath.split('/')
-        // if( _path.length==1 && _path=='')
-        // {
-        //     console.log('This is a root')
-        // }
-        // else // it can be a dire
-        // {
-        //     console.log('It can ba a dir')
-        //     if( _path.at(-1)=='') // the last was a /
-        //     {
-
-        //     }
-        //     console.log( 'Move to a dir')
-        // }
         console.log( opts.destPath.split('/'))
         console.log( opts.destPath.split('/').pop())
-        // console.log( opts.destDirId )
-        // console.log( _dir)
     }
-    // console.log( opts)
-
-    // await axios.request({
-    //     url: `me/drive/items/${ opts.itemId }`,
-    //     baseURL: getConfig.apiUrl,
-    //     method: 'PATCH',
-    //     headers: { 
-    //         Authorization: "Bearer "+opts.tokens.access_token,
-    //         "Content-Type": "application/json"
-    //     },
-    //     responseType: "json",
-    //     data: opts.data
-    // })
-    // .then( 
-    //     (res) => { 
-    //         callback('200',res.data)
-    //     }
-    // )
-    // .catch ( (err) =>{
-    //     console.log("ERR")
-    //     console.log( err.response.data )
-    //     callback('400','Sd')
-    // })
 }
 
 async function msDownloadPartial( opts, callback)
@@ -332,7 +239,6 @@ async function msDownloadPartial( opts, callback)
     await axios.get(opts.uri, _body)
     .then( 
         (res) => { 
-            // console.log( res.data)
             callback('200',res.data)
         }
     )
@@ -382,7 +288,6 @@ async function msDownload( opts, callback)
     else 
         console.log( _dir)
     
-    // var tokens=ms.getStoredToken()
     _URI=getConfig.apiUrl+'me/drive/items/'+_itemId+'?select=id,@microsoft.graph.downloadUrl'
     await axios.get(_URI, {    
         responseType: "json",
@@ -399,18 +304,11 @@ async function msDownload( opts, callback)
     })
     .catch( (err)=>{
         if( err.response==401)
-        {
             console.log("*********** RENEW TOKEN!!!!!") 
-            // ms.refreshToken(function(a){
-            //     console.log("Refreshed")
-            // })
-            // _retries++;
-        }
         else
             console.log( err);
         
         callback(err.response,'')
-        // console.log(err.code)
     })
     // return response
 }
@@ -418,7 +316,9 @@ async function msDownload( opts, callback)
 async function buildTreeDelta( opts, callback )
 {
     console.log( 'Build tree')
-    if( 'cache' in opts && opts.cache==true && (! 'nextURI' in opts || opts.nextURI=='') && (!'extra' in opts || opts.extra=='') )
+    if( 'cache' in opts && opts.cache==true && 
+    (! 'nextURI' in opts || opts.nextURI=='') && 
+    (! 'extra' in opts || opts.extra=='') )
     {
         console.log("Reading from cache")
         try{
@@ -527,19 +427,13 @@ async function buildTreeDelta( opts, callback )
             // console.log( JSON.stringify(_structure) )
             if( 'cache' in opts && opts.cache==true)
                 fs.writeFileSync('cache/cache_tree_onedrive.cache', JSON.stringify(_structure) )
-            // console.log( _structure)
-            // var allKeys = [];
-            // console.log( JSON.stringify(_structure,function( key, value ){ allKeys.push( key ); return value; }) )
             callback( 200)
         }
     }).catch( err=>{
-        // console.log( err.response.status )
         if( 'response' in err && err.response.status==401)
             console.log("*********** RENEW TOKEN!!!!!") 
         else
             console.log( err)
-        // callback(err.response.status)
-        // console.log(err.code)
     })
 }
 
@@ -553,61 +447,7 @@ async function ODInterface(callf, opts, cb )
     })
     // callf(opts, cb)
 }
-// if(1==1)
-// {
-//     // itemId='01YMYZCTJIOHFVADZVUBBZFLJ3YVHQROON';
-//     // parentReference
-//     // src="new-file001"
-//     // dest="/OverLeaf"
-//     ODInterface(buildTreeDelta,
-//         {nextURI: "", extra: ""}, function(v){ 
-//             console.log(_structure)
-//         })
-//     }
 
-
-// if(1==1)
-// {
-//     itemId='01YMYZCTJIOHFVADZVUBBZFLJ3YVHQROON';
-//     // parentReference
-//     src="new-file001"
-//     dest="/OverLeaf"
-//     ODInterface(buildTreeDelta,
-//         {nextURI: "", extra: ""}, function(v){ 
-
-//         //  console.log( _structure)
-//     var _dir=findDir(src, _structure, true)
-//     // console.log( _dir )
-//     _findSrcId=0
-//     if( src in _dir.files)
-//         _findSrcId=_dir.files[src]['id']
-//     else if( src in _dir.folders)
-//         _findSrcId=_dir.folders[dest]['id']
-
-//     // console.log("Find Dest")
-//     _dir=findDir(dest, _structure, true)
-//     // console.log( _dir )
-//     console.log("Look")
-//     _mydest=dest.split('/').pop()
-//     console.log(_mydest)
-//     var _obj={'name': 'new-file001', parentReference:{}}
-//     _findDstId=0
-//     if( _mydest in _dir.folders)
-//         _obj.parentReference.id= _dir.folders[_mydest]['id']
-
-//     // console.log( _obj )
-//     // var _obj={'name': 'new-file001'}
-//     ODInterface(msUpdateProperties,
-//         {itemId: '01YMYZCTJIOHFVADZVUBBZFLJ3YVHQROON', data: _obj}, function(v){ 
-//         //   onedrive._lastChecked=new Date(); 
-//         //   startMount()
-//         console.log( v)
-//         } 
-//       )
-
-
-// })
-//}
 module.exports = {
     ODInterface, 
     buildTreeDelta,

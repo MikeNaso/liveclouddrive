@@ -5,13 +5,13 @@ const sqlite3 = require('sqlite3')
 const getConfig = require("./config.js");
 require('console-stamp')(console, 'HH:MM:ss.l');
 
-let db = new sqlite3.Database("livedrivecloud.db");
+let db = new sqlite3.Database("cache/livedrivecloud.db");
 db.run("CREATE TABLE IF NOT EXISTS toupload( path TEXT NOT NULL primary key, tmpfile TEXT NOT NULL, superseeded INT DEFAULT 0)")
 
 _fileToUpload={}
 
 onedrive.ODInterface(onedrive.buildTreeDelta,
-  {nextURI: "", extra: ""}, function(v){ 
+  {nextURI: "", extra: "", cache: true}, function(v){ 
     onedrive._lastChecked=new Date(); 
     startMount()
   } 

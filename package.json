@@ -18,6 +18,7 @@
   "homepage": "https://github.com/pbxip/liveclouddrive#readme",
   "dependencies": {
     "console-stamp": "^3.1.0",
+    "eslint": "^8.30.0",
     "fs": "^0.0.1-security",
     "sqlite3": "^5.1.4",
     "tape": "^5.6.1"
